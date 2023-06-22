@@ -1,0 +1,53 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "geometry": {
+          "coordinates": [
+            0,
+            0
+          ],
+          "type": "Point"
+        },
+        "id": "d2976db42a92b5f27d421ba7d4ccfc7e",
+        "properties": {
+          "bounds_imcoords": [
+            188.09933471679688,
+            271.49371337890625,
+            334.47198486328125,
+            350.0801086425781
+          ],
+          "detection_score": 0.9873793125152588,
+          "feature_types": {
+            "airplane": 0.9873793125152588
+          },
+          "image_id": "79d7c3d5c81a8870f03a3032e2a2c0da"
+        },
+        "type": "Feature"
+      },
+      {
+        "geometry": {
+          "coordinates": [
+            0,
+            0
+          ],
+          "type": "Point"
+        },
+        "id": "a2c898359e706a6ad770d761994e35c9",
+        "properties": {
+          "bounds_imcoords": [
+            147.6332550048828,
+            131.3967742919922,
+            291.29302978515625,
+            206.61997985839844
+          ],
+          "detection_score": 0.9852103590965271,
+          "feature_types": {
+            "airplane": 0.9852103590965271
+          },
+          "image_id": "49d19fb6cd6ccc5b1aabc000ce5dd11a"
+        },
+        "type": "Feature"
+      }
+    ]
+  }
