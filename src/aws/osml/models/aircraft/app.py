@@ -27,7 +27,7 @@ cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
 # add project-specific config used for training to remove warnings
 cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
 # path to the model weights we trained
-cfg.MODEL.WEIGHTS = os.getenv("MODEL_WEIGHTS", os.path.join("/home/assets/", "model_weights.pth"))
+cfg.MODEL.WEIGHTS = os.getenv(os.path.join("MODEL_WEIGHTS"), os.path.join("/home/assets/", "model_weights.pth"))
 
 # build the default predictor
 plane_predictor = DefaultPredictor(cfg)

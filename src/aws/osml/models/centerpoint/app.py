@@ -10,9 +10,6 @@ from aws.osml.models.server_utils import detect_to_geojson_dict, load_image, set
 
 app = Flask(__name__)
 
-# Required to be set in ENV
-MODEL_SELECTION = os.getenv("MODEL_SELECTION")
-
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
 
@@ -59,7 +56,7 @@ def predict() -> Response:
 
     :return: Response: Contains the GeoJSON results or an error status
     """
-    app.logger.debug(f"Invoking model endpoint using {MODEL_SELECTION}")
+    app.logger.debug(f"Invoking centerpoint model endpoint")
 
     try:
         # load the image to get its dimensions
