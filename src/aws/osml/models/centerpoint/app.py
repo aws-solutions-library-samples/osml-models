@@ -56,7 +56,7 @@ def predict() -> Response:
 
     :return: Response: Contains the GeoJSON results or an error status
     """
-    app.logger.debug(f"Invoking centerpoint model endpoint")
+    app.logger.debug("Invoking centerpoint model endpoint")
 
     try:
         # load the image to get its dimensions
