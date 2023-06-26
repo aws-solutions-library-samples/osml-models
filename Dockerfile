@@ -1,133 +1,88 @@
-# Set the base image to build from
+# set the base image to build from Internal Amazon Docker Image rather than DockerHub
+# if a lot of request were made, CodeBuild will failed due to...
+# "You have reached your pull rate limit. You may increase the limit by authenticating and upgrading"
 ARG BASE_CONTAINER=public.ecr.aws/amazonlinux/amazonlinux:latest
 
-# Swap BASE_CONTAINER to a container output while building cert-base if you need to override the pip mirror
-FROM ${BASE_CONTAINER} as osml_model
+# swap BASE_CONTAINER to a container output while building cert-base if you need to override the pip mirror
+FROM ${BASE_CONTAINER} as osml_models
 
-############# Inject model selection build configuration parameters #############
-# Ensure that a model selection was provided
+# exit if we didn't find a MODEL_SELECTION value setd
 ARG MODEL_SELECTION
 ENV MODEL_SELECTION=$MODEL_SELECTION
-
-# Exit if we didn't find a MODEL_SELECTION value set
+# exit if we didn't find a MODEL_SELECTION value setd
 RUN if [[ -z "${MODEL_SELECTION}" ]]; then echo 'Argument MODEL_SELECTION must be specified!'; exit 1; fi
 
-
-############# Set default cert information for pip #############
-# Only override if you're using a mirror with a cert pulled in using cert-base as a build parameter
+# only override if you're using a mirror with a cert pulled in using cert-base as a build parameter
 ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 ARG PIP_INSTALL_LOCATION=https://pypi.org/simple/
 
-############# Install compilers and C/C++ tools for D2 deps #############
+# give sudo permissions
+USER root
+
+# set working directory to home
+WORKDIR /home/
+
+# configure, update, and refresh yum enviornment
+RUN yum update -y && yum clean all && yum makecache && yum install -y wget
+
+# install dev tools and compiler resources
 RUN yum groupinstall -y "Development Tools";
 
-############# Install Miniconda3 ############
-# Grab wget to pull the miniconda installer
-RUN yum install -y wget
+# install miniconda
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
-    && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local
+    && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
+    && rm ${MINICONDA_VERSION}.sh \
+    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
-# Clean up installer file
-RUN rm ${MINICONDA_VERSION}.sh
-
-############# Install GDAL and python venv to the user profile ############
-# This sets the python3 alias to be the miniconda managed python3.10 ENV
-ARG PYTHON_VERSION=3.10
-RUN conda install -c conda-forge -q -y --prefix /usr/local python=${PYTHON_VERSION} gdal proj
-
-############# Set Proj installation metadata ############
-ENV PROJ_LIB=/usr/local/share/proj
-RUN chmod 777 --recursive ${PROJ_LIB}
-
-############# Installing latest D2 build dependencies if plane model is selected as the target ############
-# Force cuda since it won't be available in Docker build env
-ENV FORCE_CUDA="1"
-# Build D2 only for Volta architecture - V100 chips (ml.p3 AWS instances)
-ENV TORCH_CUDA_ARCH_LIST="Volta"
-ARG CUDA_VERSION="11.7.0"
-
-RUN if [ "$MODEL_SELECTION" = "aircraft" ]; \
-     then \
-      conda install -q -y --prefix /usr/local --channel "nvidia/label/cuda-${CUDA_VERSION}" cuda; \
-            python3 -m pip install \
-               --index-url ${PIP_INSTALL_LOCATION} \
-               --cert ${BUILD_CERT} \
-               --upgrade \
-               --force-reinstall \
-               torch torchvision cython opencv-contrib-python-headless; \
-            yum install -y git; \
-            python3 -m pip install \
-                --index-url ${PIP_INSTALL_LOCATION} \
-                --cert ${BUILD_CERT} \
-                 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'; \
-            python3 -m pip install \
-                --index-url ${PIP_INSTALL_LOCATION} \
-                --cert ${BUILD_CERT} \
-                'git+https://github.com/facebookresearch/fvcore'; \
-            python3 -m pip install \
-                --index-url ${PIP_INSTALL_LOCATION} \
-                --cert ${BUILD_CERT} \
-                'git+https://github.com/facebookresearch/detectron2.git'; \
-    fi;
-# Set a fixed model cache directory. Detectron2 requirement
+# set all the ENV vars needed for build
+ENV PATH=/opt/conda/bin:$PATH
+ENV CONDA_TARGET_ENV=osml-models
+ENV TORCH_CUDA_ARCH_LIST=Volta
+ENV FVCORE_CACHE="/tmp"
+ENV CC="clang"
+ENV CXX="clang++"
+ENV ARCHFLAGS="-arch x86_64"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/conda/lib/:/opt/conda/bin:/usr/include:/usr/local/"
+ENV PROJ_LIB=/opt/conda/share/proj
 ENV FVCORE_CACHE="/tmp"
 
+# create /entry.sh which will be our new shell entry point
+# this performs actions to configure the environment
+# before starting a new shell (which inherits the env).
+# the exec is important! this allows signals to pass
+RUN     (echo '#!/bin/bash' \
+    &&   echo '__conda_setup="$(/opt/conda/bin/conda shell.bash hook 2> /dev/null)"' \
+    &&   echo 'eval "$__conda_setup"' \
+    &&   echo 'conda activate "${CONDA_TARGET_ENV:-base}"' \
+    &&   echo 'python3 -m aws.osml.models.${MODEL_SELECTION}.app' \
+    &&   echo '>&2 echo "ENTRYPOINT: CONDA_DEFAULT_ENV=${CONDA_DEFAULT_ENV}"' \
+    &&   echo 'exec "$@"'\
+        ) >> /entry.sh && chmod +x /entry.sh
 
-############# Copy control model source code  ############
-COPY . /home/
-RUN chmod 777 --recursive /home/
+# tell the docker build process to use this for RUN.
+# the default shell on Linux is ["/bin/sh", "-c"], and on Windows is ["cmd", "/S", "/C"]
+SHELL ["/entry.sh", "/bin/bash", "-c"]
 
+# copy our application source
+COPY . .
 
-############# Setting up application runtime layer #############
-# Hop in the home directory where we have copied the source files
-WORKDIR /home
-RUN python3 -m pip install \
-    --index-url ${PIP_INSTALL_LOCATION} \
-    --cert ${BUILD_CERT} \
-    -r requirements.txt
+# create the conda env
+RUN conda env create
 
-# Install package module to the instance
-RUN python3 setup.py install
+# configure .bashrc to drop into a conda env and immediately activate our TARGET env
+RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
-# Clean up any dangling conda resources
+# install the application
+RUN python3 -m pip install .
+
+# clean up the install
 RUN conda clean -afy
 
-# Make sure we expose our ports
+# make sure we expose our ports
 EXPOSE 8080
 
-# Update the PYTHONPATH to ensure the source directory is found
-ENV PYTHONPATH="${PYTHONPATH}:./src/:/usr/local/"
-# Update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/"
-# Update the PATH to ensure the user bins can be found
-ENV PATH="${PATH}:/usr/sbin/:/usr/local/"
-
-# Set the model entry point path
-ENV MODEL_ENTRY_POINT="aws.osml.models.${MODEL_SELECTION}.app"
-
-# Create a script to pass command line args to python
-RUN echo "python3 -m ${MODEL_ENTRY_POINT} \$@" >> /run_model.sh
-
-# Set the entry point command to the bin we created
-ENTRYPOINT ["bash", "/run_model.sh"]
-
-# Build the unit_test stage
-FROM osml_model as unit_test
-
-# Hop in the home directory
-WORKDIR /home
-
-# Set root user for dep installs
-USER root
-
-# Import the source directory to the generalized path
-ENV PYTHONPATH="./src/"
-
-# Set the entry point command to run unit tests
-RUN echo "python3 -m pytest -vv --cov-report=term-missing --cov=aws.osml.models.${MODEL_SELECTION} test/aws/osml/models/${MODEL_SELECTION}/ \$@" > /run_pytest.sh
-CMD ["/bin/bash", "/run_pytest.sh"]
-
-ENTRYPOINT []
+# set the entry point script
+ENTRYPOINT ["/entry.sh"]

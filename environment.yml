@@ -1,0 +1,20 @@
+name: osml-models
+
+dependencies:
+  - python=3.10
+  - gdal
+  - libgcc
+  - proj
+  - cython
+  - cudatoolkit-dev
+  - libjpeg-turbo
+  - pytorch
+  - torchvision
+  - pycocotools
+  - detectron2
+
+channels:
+  - conda-forge
+  - nvidia/label/cuda-11.7.0
+  - pytorch
+  - nodefaults
