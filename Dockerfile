@@ -79,7 +79,7 @@ RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashr
 RUN python3 -m pip install .
 
 # clean up the install
-RUN conda clean -afy
+#RUN conda clean -afy
 
 # make sure we expose our ports
 EXPOSE 8080
