@@ -1,7 +1,7 @@
-name: osml-models
+name: osml_models
 
 dependencies:
-  - python=3.10
+  - python
   - gdal
   - libgcc
   - proj
@@ -15,6 +15,4 @@ dependencies:
 
 channels:
   - conda-forge
-  - nvidia/label/cuda-11.7.0
   - pytorch
-  - nodefaults
