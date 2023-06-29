@@ -39,7 +39,7 @@ RUN wget -c ${MINICONDA_URL} \
 
 # set all the ENV vars needed for build
 ENV PATH=/opt/conda/bin:$PATH
-ENV CONDA_TARGET_ENV=osml-models
+ENV CONDA_TARGET_ENV=osml_models
 ENV TORCH_CUDA_ARCH_LIST=Volta
 ENV FVCORE_CACHE="/tmp"
 ENV CC="clang"
@@ -49,6 +49,12 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/opt/conda/lib/:/opt/conda/bin:/usr/incl
 ENV PROJ_LIB=/opt/conda/share/proj
 ENV FVCORE_CACHE="/tmp"
 
+# copy our application source
+COPY . .
+
+# create the conda env
+RUN conda env create
+
 # create /entry.sh which will be our new shell entry point
 # this performs actions to configure the environment
 # before starting a new shell (which inherits the env).
@@ -57,7 +63,6 @@ RUN     (echo '#!/bin/bash' \
     &&   echo '__conda_setup="$(/opt/conda/bin/conda shell.bash hook 2> /dev/null)"' \
     &&   echo 'eval "$__conda_setup"' \
     &&   echo 'conda activate "${CONDA_TARGET_ENV:-base}"' \
-    &&   echo 'python3 -m aws.osml.models.${MODEL_SELECTION}.app' \
     &&   echo '>&2 echo "ENTRYPOINT: CONDA_DEFAULT_ENV=${CONDA_DEFAULT_ENV}"' \
     &&   echo 'exec "$@"'\
         ) >> /entry.sh && chmod +x /entry.sh
@@ -65,12 +70,6 @@ RUN     (echo '#!/bin/bash' \
 # tell the docker build process to use this for RUN.
 # the default shell on Linux is ["/bin/sh", "-c"], and on Windows is ["cmd", "/S", "/C"]
 SHELL ["/entry.sh", "/bin/bash", "-c"]
-
-# copy our application source
-COPY . .
-
-# create the conda env
-RUN conda env create
 
 # configure .bashrc to drop into a conda env and immediately activate our TARGET env
 RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
@@ -86,3 +85,6 @@ EXPOSE 8080
 
 # set the entry point script
 ENTRYPOINT ["/entry.sh"]
+
+# set the model to start on boot
+CMD python3 -m aws.osml.models.$MODEL_SELECTION.app
