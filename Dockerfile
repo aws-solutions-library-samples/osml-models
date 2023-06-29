@@ -4,7 +4,7 @@
 ARG BASE_CONTAINER=public.ecr.aws/amazonlinux/amazonlinux:latest
 
 # swap BASE_CONTAINER to a container output while building cert-base if you need to override the pip mirror
-FROM ${BASE_CONTAINER} as osml_models
+FROM ${BASE_CONTAINER} as osml_model
 
 # exit if we didn't find a MODEL_SELECTION value setd
 ARG MODEL_SELECTION
