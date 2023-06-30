@@ -78,7 +78,4 @@ RUN python3 -m pip install .
 EXPOSE 8080
 
 # set the entry point script
-ENTRYPOINT ["/entry.sh"]
-
-# set the model to start on boot
-CMD python3 -m aws.osml.models.$MODEL_SELECTION.app
+ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]
