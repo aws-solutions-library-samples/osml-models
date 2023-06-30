@@ -6,12 +6,6 @@ ARG BASE_CONTAINER=public.ecr.aws/amazonlinux/amazonlinux:latest
 # swap BASE_CONTAINER to a container output while building cert-base if you need to override the pip mirror
 FROM ${BASE_CONTAINER} as osml_model
 
-# exit if we didn't find a MODEL_SELECTION value setd
-ARG MODEL_SELECTION
-ENV MODEL_SELECTION=$MODEL_SELECTION
-# exit if we didn't find a MODEL_SELECTION value setd
-RUN if [[ -z "${MODEL_SELECTION}" ]]; then echo 'Argument MODEL_SELECTION must be specified!'; exit 1; fi
-
 # only override if you're using a mirror with a cert pulled in using cert-base as a build parameter
 ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 ARG PIP_INSTALL_LOCATION=https://pypi.org/simple/
