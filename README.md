@@ -3,14 +3,15 @@
 This package contains sample models that can be used to test OversightML installations without incurring high compute costs typically associated with complex Computer Vision models. These models implement an interface compatible with SageMaker and are suitable for deployment as endpoints with CPU instances.
 
 ### Table of Contents
-1. [Getting Started](#getting-started)
-    1. [Prerequisites](#prerequisites)
-    1. [Installation Guide](#installation-guide)
-    1. [Build and Local Testing](#build-and-local-testing)
-1. [Support & Feedback](#support--feedback)
-1. [Resources](#resources)
-1. [Security](#security)
-1. [License](#license)
+* [Getting Started](#getting-started)
+    * [Prerequisites](#prerequisites)
+    * [Installation Guide](#installation-guide)
+    * [Documentation](#documentation)
+    * [Build and Local Testing](#build-and-local-testing)
+* [Support & Feedback](#support--feedback)
+* [Resources](#resources)
+* [Security](#security)
+* [License](#license)
 
 
 ## Getting Started
@@ -26,6 +27,15 @@ Clone `osml-models` package into your desktop
 
 ```sh
 git clone https://github.com/aws-solutions-library-samples/osml-models.git
+```
+
+### Documentation
+
+You can find documentation for this library in the `./doc` directory. Sphinx is used to construct a searchable HTML
+version of the API documents.
+
+```shell
+tox -e docs
 ```
 
 ### Build and Local Testing
