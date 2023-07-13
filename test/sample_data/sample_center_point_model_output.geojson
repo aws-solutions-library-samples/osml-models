@@ -1,0 +1,29 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "geometry": {
+          "coordinates": [
+            0,
+            0
+          ],
+          "type": "Point"
+        },
+        "id": "2633df8645fcde9e8536a2c82c7ece9c",
+        "properties": {
+          "bounds_imcoords": [
+            204.8,
+            204.8,
+            307.2,
+            307.2
+          ],
+          "detection_score": 1,
+          "feature_types": {
+            "sample_object": 1
+          },
+          "image_id": "b8bcc4d24bd548bce0f52f3a1563192e"
+        },
+        "type": "Feature"
+      }
+    ]
+  }
