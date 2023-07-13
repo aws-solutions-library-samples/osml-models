@@ -1,7 +1,7 @@
 # set the base image to build from Internal Amazon Docker Image rather than DockerHub
 # if a lot of request were made, CodeBuild will failed due to...
 # "You have reached your pull rate limit. You may increase the limit by authenticating and upgrading"
-ARG BASE_CONTAINER=public.ecr.aws/amazonlinux/amazonlinux:latest
+ARG BASE_CONTAINER=public.ecr.aws/amazonlinux/amazonlinux:2023
 
 # swap BASE_CONTAINER to a container output while building cert-base if you need to override the pip mirror
 FROM ${BASE_CONTAINER} as osml_model
@@ -76,11 +76,19 @@ COPY . .
 # install the application
 RUN python3 -m pip install .
 
+# this is a hotfix until the most recent detectron2 udpates reach conda-forge
+RUN sed -i "s|Image.LINEAR|Image.BILINEAR |g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/detectron2/data/transforms/transform.py
+
 # make sure we expose our ports
 EXPOSE 8080
 
-# this is a hotfix until the most recent detectron2 udpates reach conda-forge
-RUN sed -i "s|Image.LINEAR|Image.BILINEAR |g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/detectron2/data/transforms/transform.py
+# set up a health check at that port
+HEALTHCHECK NONE
+
+# set up a user to run the container as and assume it
+RUN adduser model
+RUN chown -R model:model ./
+USER model
 
 # set the entry point script
 ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]
