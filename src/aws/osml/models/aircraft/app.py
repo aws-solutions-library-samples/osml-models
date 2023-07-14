@@ -76,7 +76,7 @@ def predict() -> Response:
         detects: List[dict] = []
 
         # path to tmp file
-        tmp_file = "/tmp/tmp.tif"
+        tmp_file = "tmp.tif"
 
         # convert the GDAL dataset into a temporary file
         gdal.Translate(tmp_file, ds)
