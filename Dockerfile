@@ -1,10 +1,4 @@
-# set the base image to build from Internal Amazon Docker Image rather than DockerHub
-# if a lot of request were made, CodeBuild will failed due to...
-# "You have reached your pull rate limit. You may increase the limit by authenticating and upgrading"
-ARG BASE_CONTAINER=public.ecr.aws/amazonlinux/amazonlinux:2023
-
-# swap BASE_CONTAINER to a container output while building cert-base if you need to override the pip mirror
-FROM ${BASE_CONTAINER} as osml_model
+FROM public.ecr.aws/amazonlinux/amazonlinux:2023 as osml_model
 
 # only override if you're using a mirror with a cert pulled in using cert-base as a build parameter
 ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
