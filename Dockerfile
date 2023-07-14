@@ -71,7 +71,12 @@ COPY . .
 RUN python3 -m pip install .
 
 # this is a hotfix until the most recent detectron2 udpates reach conda-forge
+# https://github.com/facebookresearch/detectron2/commit/ff53992b1985b63bd3262b5a36167098e3dada02
 RUN sed -i "s|Image.LINEAR|Image.BILINEAR |g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/detectron2/data/transforms/transform.py
+
+# this is a hotfix until facebookresearch fixes their telemetry logging package
+# https://github.com/facebookresearch/iopath/issues/21
+RUN sed -i "s|handler.log_event()|pass|g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/iopath/common/file_io.py
 
 # make sure we expose our ports
 EXPOSE 8080
