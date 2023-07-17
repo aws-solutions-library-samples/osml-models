@@ -33,3 +33,7 @@ jobs:
       run: |
         # stop the build if there are Python syntax errors or undefined names
         tox
+<<<<<<< HEAD:.github/workflows/python-tox.yml
+=======
+
+>>>>>>> 575416d (Adding ASH output to .gitignore and fixing linting):.github/workflows/main.yml
