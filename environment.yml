@@ -13,3 +13,4 @@ dependencies:
   - # These two are left unpinned to work on MAC+Linux OS
   - conda-forge::libgcc
   - conda-forge::cudatoolkit-dev
+  -
