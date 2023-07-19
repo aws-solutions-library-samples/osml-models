@@ -11,7 +11,7 @@ USER root
 WORKDIR /home/
 
 # configure, update, and refresh yum enviornment
-RUN yum update -y && yum clean all && yum makecache && yum install -y wget
+RUN yum update -y && yum clean all && yum makecache && yum install -y wget shadow-utils
 
 # install dev tools and compiler resources
 RUN yum groupinstall -y "Development Tools";
