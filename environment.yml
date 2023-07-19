@@ -11,13 +11,6 @@ dependencies:
   - conda-forge::torchvision=0.15.2
   - conda-forge::pycocotools=2.0.6
   - conda-forge::detectron2=0.6
-<<<<<<< HEAD
 
 channels:
   - conda-forge
-=======
-  - # These two are left unpinned to work on MAC+Linux OS
-  - conda-forge::libgcc
-  - conda-forge::cudatoolkit-dev
-  -
->>>>>>> 575416d (Adding ASH output to .gitignore and fixing linting)
