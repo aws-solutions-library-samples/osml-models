@@ -6,7 +6,8 @@
 *.tox
 *.idea
 *venv
-*aggregated_results.txt
+*result.txt
+*results.txt
 __pycache__/
 *.py[cod]
 *$py.class
