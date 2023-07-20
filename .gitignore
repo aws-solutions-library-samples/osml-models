@@ -6,7 +6,6 @@
 *.tox
 *.idea
 *venv
-<<<<<<< HEAD
 *result.txt
 *results.txt
 __pycache__/
