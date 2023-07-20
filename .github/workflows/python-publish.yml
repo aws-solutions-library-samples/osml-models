@@ -22,6 +22,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+      with:
+        lfs: 'true'
+        ssh-key: ${{ secrets.git_ssh_key }}
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
