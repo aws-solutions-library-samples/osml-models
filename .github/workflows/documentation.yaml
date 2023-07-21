@@ -10,7 +10,9 @@ jobs:
       - uses: actions/setup-python@v3
       - name: Install dependencies
         run: |
-          pip install sphinx sphinx_rtd_theme
+          pip install sphinx
+          python -m pip install sphinx-autoapi
+          python -m pip install sphinx_rtd_theme
       - name: Sphinx build
         run: |
           sphinx-build doc _build
