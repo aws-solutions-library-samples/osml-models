@@ -64,6 +64,7 @@ SHELL ["/entry.sh", "/bin/bash", "-c"]
 # configure .bashrc to drop into a conda env and immediately activate our TARGET env
 RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
+# install CUDA drivers in the container
 RUN conda install -q -y --channel "nvidia/label/cuda-11.7.0" cuda
 
 # force cuda drivers to install since it won't be available in Docker build env
