@@ -55,6 +55,7 @@ def predict() -> Response:
     :return: Response: Contains the GeoJSON results or an error status
     """
     app.logger.debug("Invoking model endpoint using the Detectron2 Aircraft Model!")
+    app.logger.debug(f"Using ${cfg.MODEL.DEVICE} mode.")
     try:
         # Load the image to get its dimensions
         app.logger.debug("Loading image request.")

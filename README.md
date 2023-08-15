@@ -77,7 +77,7 @@ docker build . -t osml-models:latest
 
 In one terminal, run the following command to start the server:
 ```bash
-docker run -p 8080:8080 -e MODEL_SELECTION=${MODEL_SELECTION} osml-models:latest}
+docker run -p 8080:8080 -e MODEL_SELECTION=${MODEL_SELECTION} osml-models:latest
 ```
 
 In another terminal to invoke the rest server and return the inference on a single tile, run the following command from the root of this repository:
