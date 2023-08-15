@@ -5,7 +5,6 @@ dependencies:
   - conda-forge::proj=9.2.1
   - conda-forge::libgcc
   - conda-forge::cython=0.29.36
-  - conda-forge::cudatoolkit-dev
   - conda-forge::libjpeg-turbo=2.1.5.1
   - conda-forge::pytorch=2.0.0
   - conda-forge::torchvision=0.15.2
