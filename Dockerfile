@@ -27,9 +27,6 @@ RUN wget -c ${MINICONDA_URL} \
     && rm ${MINICONDA_VERSION}.sh \
     && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
-# Clean up installer file
-RUN rm ${MINICONDA_VERSION}.sh
-
 # Restrict the conda channel to reduce package incompatibility problems
 RUN conda config --set channel_priority strict
 
@@ -61,14 +58,17 @@ RUN python3 -m pip install \
            --upgrade \
            --force-reinstall \
            torch torchvision cython opencv-contrib-python-headless;
+
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
              'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI';
+
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
             'git+https://github.com/facebookresearch/fvcore';
+
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
