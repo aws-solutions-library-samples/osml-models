@@ -2,7 +2,7 @@ name: osml_models
 
 dependencies:
   - nvidia/label/cuda-11.7.0::cuda
-  - conda-forge::python=3.11.4
+  - conda-forge::python=3.10
   - conda-forge::gdal=3.7.0
   - conda-forge::proj=9.2.1
   - conda-forge::libgcc=7.2.0
