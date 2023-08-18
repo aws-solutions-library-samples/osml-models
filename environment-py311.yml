@@ -1,17 +1,17 @@
 name: osml_models
 
 dependencies:
+  - nvidia/label/cuda-11.7.0::cuda
   - conda-forge::python=3.11.4
   - conda-forge::gdal=3.7.0
   - conda-forge::proj=9.2.1
   - conda-forge::libgcc=7.2.0
   - conda-forge::cython=0.29.36
-  - conda-forge::cudatoolkit-dev=11.7.0
   - conda-forge::libjpeg-turbo=2.1.5.1
-  - conda-forge::pytorch=2.0.0
-  - conda-forge::torchvision=0.15.2
   - conda-forge::pycocotools=2.0.6
-  - conda-forge::detectron2=0.6
-
+  - pytorch::pytorch==1.13.1
+  - pytorch::torchvision==0.14.1
 channels:
   - conda-forge
+  - pytorch
+  - nvidia/label/cuda-11.7.0

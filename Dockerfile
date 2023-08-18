@@ -33,11 +33,12 @@ ENV TORCH_CUDA_ARCH_LIST=Volta
 ENV FVCORE_CACHE="/tmp"
 ENV CC="clang"
 ENV CXX="clang++"
-ENV ARCHFLAGS="-arch x86_64"
+ENV ARCHFLAGS=Volta
 ENV LD_LIBRARY_PATH=$LIB_PATHS:$LD_LIBRARY_PATH
 ENV PROJ_LIB=/opt/conda/share/proj
 ENV FVCORE_CACHE="/tmp"
 ENV FORCE_CUDA="1"
+ENV USE_NNPACK=0
 
 # copy conda env source for Python 3.11
 COPY environment-py311.yml environment.yml
@@ -64,8 +65,7 @@ SHELL ["/entry.sh", "/bin/bash", "-c"]
 # configure .bashrc to drop into a conda env and immediately activate our TARGET env
 RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
-# install CUDA drivers in the container
-RUN conda install -q -y --channel "nvidia/label/cuda-11.7.0" cuda
+RUN python3 -m pip install 'git+https://github.com/facebookresearch/detectron2.git'
 
 # copy our application source
 COPY . .
