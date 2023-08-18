@@ -42,11 +42,11 @@ ARG PROJ_VERSION=9.2.1
 # Restrict the conda channel to reduce package incompatibility problems
 RUN conda config --set channel_priority strict
 
-RUN conda install -c conda-forge -c "nvidia/label/cuda-${CUDA_VERSION}" -q -y --prefix /usr/local \
+RUN conda install -c "nvidia/label/cuda-${CUDA_VERSION}" -c conda-forge -q -y --prefix /usr/local \
     python=${PYTHON_VERSION} \
     gdal=${GDAL_VERSION} \
     proj=${PROJ_VERSION} \
-    cuda
+    cuda=${CUDA_VERSION}
 
 ############# Set Proj installation metadata ############
 ENV PROJ_LIB=/usr/local/share/proj
