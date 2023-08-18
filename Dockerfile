@@ -5,17 +5,27 @@ FROM public.ecr.aws/amazonlinux/amazonlinux:2023 as osml_model
 ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 ARG PIP_INSTALL_LOCATION=https://pypi.org/simple/
 
+# give sudo permissions
+USER root
+
+# set working directory to home
+WORKDIR /home/
+
 ############# Install compilers and C/C++ tools for D2 deps #############
 RUN yum groupinstall -y "Development Tools";
 
+############# Install required yum packages for build #############
+RUN yum install -y wget git
+
 ############# Install Miniconda3 ############
 # Grab wget to pull the miniconda installer
-RUN yum install -y wget git
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
-    && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local
+    && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
+    && rm ${MINICONDA_VERSION}.sh \
+    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # Clean up installer file
 RUN rm ${MINICONDA_VERSION}.sh
@@ -39,6 +49,7 @@ ENV FORCE_CUDA="1"
 ENV TORCH_CUDA_ARCH_LIST="Volta"
 # Disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
+# Specify the cuda driver version to install
 ARG CUDA_VERSION="11.7.0"
 
 # Install CUDA drivers
@@ -68,13 +79,12 @@ ENV FVCORE_CACHE="/tmp"
 
 
 ############# Copy control model source code  ############
-COPY . /home/
-RUN chmod 777 --recursive /home/
+COPY . .
+RUN chmod 777 --recursive .
 
 
 ############# Setting up application runtime layer #############
 # Hop in the home directory where we have copied the source files
-WORKDIR /home
 RUN python3 -m pip install \
     --index-url ${PIP_INSTALL_LOCATION} \
     --cert ${BUILD_CERT} \
