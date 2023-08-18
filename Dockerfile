@@ -23,9 +23,8 @@ ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
-    && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
+    && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local \
     && rm ${MINICONDA_VERSION}.sh \
-    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # Restrict the conda channel to reduce package incompatibility problems
 RUN conda config --set channel_priority strict
