@@ -38,7 +38,15 @@ RUN conda config --set channel_priority strict
 ############# Install GDAL and python venv to the user profile ############
 # This sets the python3 alias to be the miniconda managed python3.10 ENV
 ARG PYTHON_VERSION=3.11
-RUN conda install -c conda-forge -q -y --prefix /usr/local python=${PYTHON_VERSION} gdal==3.7.1 proj=9.2.1
+ARG CUDA_VERSION=11.7.0
+ARG GDAL_VERSION=3.7.1
+ARG PROJ_VERSION=9.2.1
+
+RUN conda install -c conda-forge -c "nvidia/label/cuda-${CUDA_VERSION}" -q -y --prefix /usr/local \
+    python=${PYTHON_VERSION} \
+    gdal=${GDAL_VERSION} \
+    proj=${PROJ_VERSION} \
+    cuda
 
 ############# Set Proj installation metadata ############
 ENV PROJ_LIB=/usr/local/share/proj
@@ -51,8 +59,6 @@ ENV FORCE_CUDA="1"
 ENV TORCH_CUDA_ARCH_LIST="Volta"
 # Disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
-# Specify the cuda driver version to install
-ARG CUDA_VERSION="11.7.0"
 
 # Install CUDA drivers
 RUN conda install -q -y --prefix /usr/local --channel "nvidia/label/cuda-${CUDA_VERSION}" cuda;
