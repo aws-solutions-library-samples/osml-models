@@ -24,7 +24,12 @@ ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
     && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local \
-    && rm ${MINICONDA_VERSION}.sh \
+    && rm ${MINICONDA_VERSION}.sh
+
+# Update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/"
+# Update the PATH to ensure the user bins can be found
+ENV PATH="${PATH}:/usr/local/"
 
 # Restrict the conda channel to reduce package incompatibility problems
 RUN conda config --set channel_priority strict
@@ -94,13 +99,6 @@ RUN conda clean -afy
 
 # Make sure we expose our ports
 EXPOSE 8080
-
-# Update the PYTHONPATH to ensure the source directory is found
-ENV PYTHONPATH="${PYTHONPATH}:./src/:/usr/local/"
-# Update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/"
-# Update the PATH to ensure the user bins can be found
-ENV PATH="${PATH}:/usr/sbin/:/usr/local/"
 
 ############# Inject model selection build configuration parameters #############
 # Ensure that a model selection was provided and set the entry point
