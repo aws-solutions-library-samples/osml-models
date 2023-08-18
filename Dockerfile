@@ -32,15 +32,15 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/
 # Update the PATH to ensure the user bins can be found
 ENV PATH="${PATH}:/usr/local/"
 
-# Restrict the conda channel to reduce package incompatibility problems
-RUN conda config --set channel_priority strict
-
 ############# Install GDAL and python venv to the user profile ############
 # This sets the python3 alias to be the miniconda managed python3.10 ENV
 ARG PYTHON_VERSION=3.11
 ARG CUDA_VERSION=11.7.0
 ARG GDAL_VERSION=3.7.1
 ARG PROJ_VERSION=9.2.1
+
+# Restrict the conda channel to reduce package incompatibility problems
+RUN conda config --set channel_priority strict
 
 RUN conda install -c conda-forge -c "nvidia/label/cuda-${CUDA_VERSION}" -q -y --prefix /usr/local \
     python=${PYTHON_VERSION} \
@@ -59,9 +59,6 @@ ENV FORCE_CUDA="1"
 ENV TORCH_CUDA_ARCH_LIST="Volta"
 # Disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
-
-# Install CUDA drivers
-RUN conda install -q -y --prefix /usr/local --channel "nvidia/label/cuda-${CUDA_VERSION}" cuda;
 
 RUN python3 -m pip install \
            --index-url ${PIP_INSTALL_LOCATION} \
