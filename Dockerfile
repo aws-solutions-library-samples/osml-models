@@ -28,6 +28,7 @@ RUN wget -c ${MINICONDA_URL} \
 
 # Update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
 ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/"
+
 # Update the PATH to ensure the user bins can be found
 ENV PATH="${PATH}:/usr/local/"
 
@@ -36,7 +37,7 @@ RUN conda config --set channel_priority strict
 
 ############# Install GDAL and python venv to the user profile ############
 # This sets the python3 alias to be the miniconda managed python3.10 ENV
-ARG PYTHON_VERSION=3.10
+ARG PYTHON_VERSION=3.11
 RUN conda install -c conda-forge -q -y --prefix /usr/local python=${PYTHON_VERSION} gdal proj
 
 ############# Set Proj installation metadata ############
