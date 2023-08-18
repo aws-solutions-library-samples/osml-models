@@ -38,7 +38,7 @@ RUN conda config --set channel_priority strict
 ############# Install GDAL and python venv to the user profile ############
 # This sets the python3 alias to be the miniconda managed python3.10 ENV
 ARG PYTHON_VERSION=3.11
-RUN conda install -c conda-forge -q -y --prefix /usr/local python=${PYTHON_VERSION} gdal proj
+RUN conda install -c conda-forge -q -y --prefix /usr/local python=${PYTHON_VERSION} gdal==3.7.1 proj=9.2.1
 
 ############# Set Proj installation metadata ############
 ENV PROJ_LIB=/usr/local/share/proj
@@ -62,7 +62,7 @@ RUN python3 -m pip install \
            --cert ${BUILD_CERT} \
            --upgrade \
            --force-reinstall \
-           torch torchvision cython opencv-contrib-python-headless;
+           torch==2.0.1 torchvision==0.15.2 cython==3.0.0 opencv-contrib-python-headless==4.8.0.76;
 
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
