@@ -31,6 +31,8 @@ ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/
 
 # Update the PATH to ensure the user bins can be found
 ENV PATH="${PATH}:/usr/local/"
+# Disable NNPACK since we don't do training with this container
+ENV USE_NNPACK=0
 
 ############# Install GDAL and python venv to the user profile ############
 # This sets the python3 alias to be the miniconda managed python3.10 ENV
@@ -42,13 +44,13 @@ ARG PROJ_VERSION=9.2.1
 # Restrict the conda channel to reduce package incompatibility problems
 RUN conda config --set channel_priority strict
 
+RUN conda install -c "nvidia/label/cuda-${CUDA_VERSION}" -q -y --prefix /usr/local \
+    cuda=${CUDA_VERSION}
+
 RUN conda install -c conda-forge -q -y --prefix /usr/local \
     python=${PYTHON_VERSION} \
     gdal=${GDAL_VERSION} \
     proj=${PROJ_VERSION}
-
-RUN conda install -c "nvidia/label/cuda-${CUDA_VERSION}" -q -y --prefix /usr/local \
-    cuda=${CUDA_VERSION}
 
 ############# Set Proj installation metadata ############
 ENV PROJ_LIB=/usr/local/share/proj
@@ -59,8 +61,6 @@ RUN chmod 777 --recursive ${PROJ_LIB}
 ENV FORCE_CUDA="1"
 # Build D2 only for Volta architecture - V100 chips (ml.p3 AWS instances)
 ENV TORCH_CUDA_ARCH_LIST="Volta"
-# Disable NNPACK since we don't do training with this container
-ENV USE_NNPACK=0
 
 RUN python3 -m pip install \
            --index-url ${PIP_INSTALL_LOCATION} \
