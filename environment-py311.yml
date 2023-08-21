@@ -1,6 +1,7 @@
 name: osml_models
 
 dependencies:
+  - defaults::conda=23.7.2
   - nvidia/label/cuda-11.7.0::cuda
   - conda-forge::python=3.11
   - conda-forge::gdal=3.7.0
@@ -8,3 +9,4 @@ dependencies:
 channels:
   - conda-forge
   - nvidia/label/cuda-11.7.0
+  - defaults
