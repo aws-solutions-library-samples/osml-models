@@ -95,11 +95,9 @@ RUN python3 -m pip install \
 # set a fixed model cache directory. Detectron2 requirement
 ENV FVCORE_CACHE="/tmp"
 
-
 ############# Copy control model source code  ############
 COPY . .
 RUN chmod 777 --recursive .
-
 
 ############# Setting up application runtime layer #############
 # hop in the home directory where we have copied the source files
@@ -111,22 +109,24 @@ RUN python3 -m pip install \
 # clean up any dangling conda resources
 RUN conda clean -afy
 
+# this is a hotfix until the most recent detectron2 udpates reach conda-forge
+# https://github.com/facebookresearch/detectron2/commit/ff53992b1985b63bd3262b5a36167098e3dada02
+RUN sed -i "s|Image.LINEAR|Image.BILINEAR |g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/detectron2/data/transforms/transform.py
+
+# this is a hotfix until facebookresearch fixes their telemetry logging package
+# https://github.com/facebookresearch/iopath/issues/21
+RUN sed -i "s|handler.log_event()|pass|g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/iopath/common/file_io.py
+
 # make sure we expose our ports
 EXPOSE 8080
 
-############# Inject model selection build configuration parameters #############
-# Ensure that a model selection was provided and set the entry point
-ARG MODEL_SELECTION
-ENV MODEL_SELECTION=$MODEL_SELECTION
-ENV MODEL_ENTRY_POINT="aws.osml.models.${MODEL_SELECTION}.app"
+# set up a health check at that port
+HEALTHCHECK NONE
 
 # set up a user to run the container as and assume it
-RUN adduser models
-RUN chown -R model:models ./
-USER models
+RUN adduser model
+RUN chown -R model:model ./
+USER model
 
-# create a script to pass command line args to python
-RUN echo "python3 -m ${MODEL_ENTRY_POINT} \$@" >> /run_model.sh
-
-# Set the entry point command to the bin we created
-ENTRYPOINT ["bash", "/run_model.sh"]
+# set the entry point script
+ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]
