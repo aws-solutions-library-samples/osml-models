@@ -1,7 +1,7 @@
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023 as osml_model
 
-############# Set default cert information for pip #############
-# Only override if you're using a mirror with a cert pulled in using cert-base as a build parameter
+# set default cert information for pip only override
+# if you're using a mirror with a cert pulled in using cert-base as a build parameter
 ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 ARG PIP_INSTALL_LOCATION=https://pypi.org/simple/
 
@@ -11,26 +11,26 @@ USER root
 # set working directory to home
 WORKDIR /home/
 
-############# Install compilers and C/C++ tools for D2 deps #############
+# install compilers and C/C++ tools building detectron2
 RUN yum groupinstall -y "Development Tools";
 
-############# Install required yum packages for build #############
+# install req yum packages
 RUN yum install -y wget git
 
-############# Install Miniconda3 ############
+# install miniconda
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
-    && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
+    && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local \
     && rm ${MINICONDA_VERSION}.sh \
-    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+    && ln -s /usr/local/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # add conda and local installs to the path so we can execute them
-ENV PATH=/usr/local/:/usr/local/bin:/opt/conda/bin:$PATH
+ENV PATH=/usr/local/:/usr/local/bin
 
 # update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:/usr/include:/usr/local/:/usr/local/bin
+ENV LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/bin:/usr/include:/usr/local/:$LD_LIBRARY_PATH
 
 # disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
@@ -42,7 +42,7 @@ ENV PROJ_LIB=/usr/local/share/proj
 COPY environment-py311.yml environment.yml
 
 # create the conda env
-RUN conda env create
+RUN conda env create --prefix=/usr/local
 
 # create /entry.sh which will be our new shell entry point
 # this performs actions to configure the environment
@@ -64,12 +64,14 @@ SHELL ["/entry.sh", "/bin/bash", "-c"]
 # configure .bashrc to drop into a conda env and immediately activate our TARGET env
 RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
-############# Installing latest D2 build dependencies if plane model is selected as the target ############
-# Force cuda since it won't be available in Docker build env
+# force cuda drivers to install since it won't be available in Docker build env
 ENV FORCE_CUDA="1"
-# build D2 only for Volta architecture - V100 chips (ml.p3 AWS instances)
+# build only for Volta architecture - V100 chips (ml.p3 AWS instances that OSML uses)
 ENV TORCH_CUDA_ARCH_LIST="Volta"
+# set a fixed model cache directory - Detectron2 requirement
+ENV FVCORE_CACHE="/tmp"
 
+# install torch deps
 RUN python3 -m pip install \
            --index-url ${PIP_INSTALL_LOCATION} \
            --cert ${BUILD_CERT} \
@@ -77,29 +79,28 @@ RUN python3 -m pip install \
            --force-reinstall \
            torch==2.0.1 torchvision==0.15.2 cython==3.0.0 opencv-contrib-python-headless==4.8.0.76;
 
+# isntall CoCo deps
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
              'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI';
 
+# install detectron2 req libraries from facebook
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
             'git+https://github.com/facebookresearch/fvcore';
 
+# install detectron2
 RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
             'git+https://github.com/facebookresearch/detectron2.git';
 
-# set a fixed model cache directory. Detectron2 requirement
-ENV FVCORE_CACHE="/tmp"
-
-############# Copy control model source code  ############
+# copy application source in to container
 COPY . .
 RUN chmod 777 --recursive .
 
-############# Setting up application runtime layer #############
 # hop in the home directory where we have copied the source files
 RUN python3 -m pip install \
     --index-url ${PIP_INSTALL_LOCATION} \
