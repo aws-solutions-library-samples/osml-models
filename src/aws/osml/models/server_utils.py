@@ -37,7 +37,7 @@ def setup_server(app: Flask):
     # mode so this provides a solution for hosting the application.
     from waitress import serve
 
-    serve(app, host="127.0.0.1", port=8080, clear_untrusted_proxy_headers=True)
+    serve(app, host="0.0.0.0", port=8080, clear_untrusted_proxy_headers=True)
 
 
 def configure_logging(verbose: bool = False) -> None:

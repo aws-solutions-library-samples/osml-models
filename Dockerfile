@@ -1,6 +1,7 @@
 FROM public.ecr.aws/amazonlinux/amazonlinux:2023 as osml_model
 
-# only override if you're using a mirror with a cert pulled in using cert-base as a build parameter
+# set default cert information for pip only override
+# if you're using a mirror with a cert pulled in using cert-base as a build parameter
 ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
 ARG PIP_INSTALL_LOCATION=https://pypi.org/simple/
 
@@ -10,11 +11,11 @@ USER root
 # set working directory to home
 WORKDIR /home/
 
-# configure, update, and refresh yum enviornment
-RUN yum update -y && yum clean all && yum makecache && yum install -y wget shadow-utils
-
-# install dev tools and compiler resources
+# install compilers and C/C++ tools building detectron2
 RUN yum groupinstall -y "Development Tools";
+
+# install req yum packages
+RUN yum install -y wget git shadow-utils
 
 # install miniconda
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
@@ -25,21 +26,19 @@ RUN wget -c ${MINICONDA_URL} \
     && rm ${MINICONDA_VERSION}.sh \
     && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
-# set all the ENV vars needed for build
-ENV LIB_PATHS=/opt/conda/bin:/opt/conda/lib/:/usr/include:/usr/local/
-ENV PATH=$LIB_PATHS:$PATH
-ENV CONDA_TARGET_ENV=osml_models
-ENV TORCH_CUDA_ARCH_LIST=Volta
-ENV FVCORE_CACHE="/tmp"
-ENV CC="clang"
-ENV CXX="clang++"
-ENV ARCHFLAGS="-arch x86_64"
-ENV LD_LIBRARY_PATH=$LIB_PATHS:$LD_LIBRARY_PATH
-ENV PROJ_LIB=/opt/conda/share/proj
-ENV FVCORE_CACHE="/tmp"
-ENV FORCE_CUDA="1"
+# add conda and local installs to the path so we can execute them
+ENV PATH=/opt/conda/bin:/usr/local/:/usr/local/bin:${PATH}
 
-# copy conda env source for Python 3.11
+# update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
+ENV LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/bin:/usr/include:/usr/local/:${LD_LIBRARY_PATH}
+
+# disable NNPACK since we don't do training with this container
+ENV USE_NNPACK=0
+
+# set local project directroy
+ENV PROJ_LIB=/usr/local/share/proj
+
+# copy our conda env configuration for Python 3.10
 COPY environment-py311.yml environment.yml
 
 # create the conda env
@@ -48,7 +47,8 @@ RUN conda env create
 # create /entry.sh which will be our new shell entry point
 # this performs actions to configure the environment
 # before starting a new shell (which inherits the env).
-# the exec is important! this allows signals to pass
+# the exec is important as this allows signals to passpw
+ENV CONDA_TARGET_ENV=osml_models
 RUN     (echo '#!/bin/bash' \
     &&   echo '__conda_setup="$(/opt/conda/bin/conda shell.bash hook 2> /dev/null)"' \
     &&   echo 'eval "$__conda_setup"' \
@@ -67,11 +67,55 @@ RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashr
 # install CUDA drivers in the container
 RUN conda install -q -y --channel "nvidia/label/cuda-11.7.0" cuda
 
-# copy our application source
-COPY . .
+# force cuda drivers to install since it won't be available in Docker build env
+ENV FORCE_CUDA="1"
+# build only for Volta architecture - V100 chips (ml.p3 AWS instances that OSML uses)
+ENV TORCH_CUDA_ARCH_LIST="Volta"
+# set a fixed model cache directory - Detectron2 requirement
+ENV FVCORE_CACHE="/tmp"
 
-# install the application
-RUN python3 -m pip install .
+# install torch deps
+RUN python3 -m pip install \
+           --index-url ${PIP_INSTALL_LOCATION} \
+           --cert ${BUILD_CERT} \
+           --upgrade \
+           --force-reinstall \
+           torch==2.0.1 torchvision==0.15.2 cython==3.0.0 opencv-contrib-python-headless==4.8.0.76;
+
+# isntall CoCo deps
+RUN python3 -m pip install \
+            --index-url ${PIP_INSTALL_LOCATION} \
+            --cert ${BUILD_CERT} \
+             'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI';
+
+# install detectron2 req libraries from facebook
+RUN python3 -m pip install \
+            --index-url ${PIP_INSTALL_LOCATION} \
+            --cert ${BUILD_CERT} \
+            'git+https://github.com/facebookresearch/fvcore';
+
+# set CUDA home dir
+ENV CUDA_HOME=${CONDA_PREFIX}
+
+# install detectron2
+RUN python3 -m pip install \
+            --index-url ${PIP_INSTALL_LOCATION} \
+            --cert ${BUILD_CERT} \
+            'git+https://github.com/facebookresearch/detectron2.git';
+
+# copy application source in to container
+
+COPY . .
+RUN chmod 777 --recursive .
+
+# hop in the home directory where we have copied the source files
+RUN python3 -m pip install \
+    --index-url ${PIP_INSTALL_LOCATION} \
+    --cert ${BUILD_CERT} \
+    .
+
+# clean up any dangling conda resources
+RUN conda clean -afy
 
 # this is a hotfix until the most recent detectron2 udpates reach conda-forge
 # https://github.com/facebookresearch/detectron2/commit/ff53992b1985b63bd3262b5a36167098e3dada02
@@ -93,4 +137,5 @@ RUN chown -R model:model ./
 USER model
 
 # set the entry point script
+#ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "sleep 180"]
 ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]
