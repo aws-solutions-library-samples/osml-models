@@ -15,19 +15,19 @@ WORKDIR /home/
 RUN yum groupinstall -y "Development Tools";
 
 # install req yum packages
-RUN yum install -y wget git
+RUN yum install -y wget git shadow-utils
 
 # install miniconda
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
-    && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local \
+    && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
     && rm ${MINICONDA_VERSION}.sh \
-    && ln -s /usr/local/etc/profile.d/conda.sh /etc/profile.d/conda.sh
+    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # add conda and local installs to the path so we can execute them
-ENV PATH=/usr/local/:/usr/local/bin:${PATH}
+ENV PATH=/opt/conda/bin:/usr/local/:/usr/local/bin:${PATH}
 
 # update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
 ENV LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/bin:/usr/include:/usr/local/:${LD_LIBRARY_PATH}
@@ -37,9 +37,6 @@ ENV USE_NNPACK=0
 
 # set local project directroy
 ENV PROJ_LIB=/usr/local/share/proj
-
-# set CUDA home dir
-ENV CUDA_HOME=/usr/local/cuda/
 
 # copy our conda env configuration for Python 3.10
 COPY environment-py311.yml environment.yml
@@ -67,6 +64,8 @@ SHELL ["/entry.sh", "/bin/bash", "-c"]
 # configure .bashrc to drop into a conda env and immediately activate our TARGET env
 RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
+RUN conda install -q -y --channel "nvidia/label/cuda-11.7.0" cuda
+
 # force cuda drivers to install since it won't be available in Docker build env
 ENV FORCE_CUDA="1"
 # build only for Volta architecture - V100 chips (ml.p3 AWS instances that OSML uses)
@@ -93,6 +92,9 @@ RUN python3 -m pip install \
             --index-url ${PIP_INSTALL_LOCATION} \
             --cert ${BUILD_CERT} \
             'git+https://github.com/facebookresearch/fvcore';
+
+# set CUDA home dir
+ENV CUDA_HOME=${CONDA_PREFIX}
 
 # install detectron2
 RUN python3 -m pip install \
@@ -133,4 +135,5 @@ RUN chown -R model:model ./
 USER model
 
 # set the entry point script
+#ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "sleep 180"]
 ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]
