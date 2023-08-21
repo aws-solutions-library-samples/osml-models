@@ -103,6 +103,7 @@ RUN python3 -m pip install \
             'git+https://github.com/facebookresearch/detectron2.git';
 
 # copy application source in to container
+
 COPY . .
 RUN chmod 777 --recursive .
 
