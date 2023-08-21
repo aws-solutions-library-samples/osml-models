@@ -41,8 +41,11 @@ ENV PROJ_LIB=/usr/local/share/proj
 # copy our conda env configuration for Python 3.10
 COPY environment-py311.yml environment.yml
 
+# set CUDA home dir
+ENV CUDA_HOME=/usr/local/cuda/
+
 # create the conda env
-RUN conda env create --prefix=/usr/local
+RUN conda env create
 
 # create /entry.sh which will be our new shell entry point
 # this performs actions to configure the environment
