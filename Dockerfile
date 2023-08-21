@@ -38,11 +38,11 @@ ENV USE_NNPACK=0
 # set local project directroy
 ENV PROJ_LIB=/usr/local/share/proj
 
-# copy our conda env configuration for Python 3.10
-COPY environment-py311.yml environment.yml
-
 # set CUDA home dir
 ENV CUDA_HOME=/usr/local/cuda/
+
+# copy our conda env configuration for Python 3.10
+COPY environment-py311.yml environment.yml
 
 # create the conda env
 RUN conda env create
