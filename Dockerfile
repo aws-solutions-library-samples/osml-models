@@ -18,48 +18,56 @@ RUN yum groupinstall -y "Development Tools";
 RUN yum install -y wget git
 
 ############# Install Miniconda3 ############
-# Grab wget to pull the miniconda installer
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
-    && ./${MINICONDA_VERSION}.sh -b -f -p /usr/local \
-    && rm ${MINICONDA_VERSION}.sh
+    && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
+    && rm ${MINICONDA_VERSION}.sh \
+    && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
-# Update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/:/usr/local/bin"
+# add conda and local installs to the path so we can execute them
+ENV PATH=/usr/local/:/usr/local/bin:/opt/conda/bin:$PATH
 
-# Update the PATH to ensure the user bins can be found
-ENV PATH="${PATH}:/usr/local/:/usr/local/bin"
-# Disable NNPACK since we don't do training with this container
+# update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib/:/usr/include:/usr/local/:/usr/local/bin
+
+# disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
 
-############# Install GDAL and python venv to the user profile ############
-# This sets the python3 alias to be the miniconda managed python3.10 ENV
-ARG PYTHON_VERSION=3.11
-ARG CUDA_VERSION=11.7.0
-ARG GDAL_VERSION=3.7.1
-ARG PROJ_VERSION=9.2.1
-
-# Restrict the conda channel to reduce package incompatibility problems
-RUN conda config --set channel_priority strict
-
-RUN conda install -c "nvidia/label/cuda-${CUDA_VERSION}" -q -y --prefix /usr/local \
-    cuda=${CUDA_VERSION}
-
-RUN conda install -c conda-forge -q -y --prefix /usr/local \
-    python=${PYTHON_VERSION} \
-    gdal=${GDAL_VERSION} \
-    proj=${PROJ_VERSION}
-
-############# Set Proj installation metadata ############
+# set local project directroy
 ENV PROJ_LIB=/usr/local/share/proj
-RUN chmod 777 --recursive ${PROJ_LIB}
+
+# copy our conda env configuration for Python 3.10
+COPY environment-py311.yml environment.yml
+
+# create the conda env
+RUN conda env create
+
+# create /entry.sh which will be our new shell entry point
+# this performs actions to configure the environment
+# before starting a new shell (which inherits the env).
+# the exec is important as this allows signals to passpw
+ENV CONDA_TARGET_ENV=osml_models
+RUN     (echo '#!/bin/bash' \
+    &&   echo '__conda_setup="$(/opt/conda/bin/conda shell.bash hook 2> /dev/null)"' \
+    &&   echo 'eval "$__conda_setup"' \
+    &&   echo 'conda activate "${CONDA_TARGET_ENV:-base}"' \
+    &&   echo '>&2 echo "ENTRYPOINT: CONDA_DEFAULT_ENV=${CONDA_DEFAULT_ENV}"' \
+    &&   echo 'exec "$@"'\
+        ) >> /entry.sh && chmod +x /entry.sh
+
+# tell the docker build process to use this for RUN.
+# the default shell on Linux is ["/bin/sh", "-c"], and on Windows is ["cmd", "/S", "/C"]
+SHELL ["/entry.sh", "/bin/bash", "-c"]
+
+# configure .bashrc to drop into a conda env and immediately activate our TARGET env
+RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
 ############# Installing latest D2 build dependencies if plane model is selected as the target ############
 # Force cuda since it won't be available in Docker build env
 ENV FORCE_CUDA="1"
-# Build D2 only for Volta architecture - V100 chips (ml.p3 AWS instances)
+# build D2 only for Volta architecture - V100 chips (ml.p3 AWS instances)
 ENV TORCH_CUDA_ARCH_LIST="Volta"
 
 RUN python3 -m pip install \
@@ -84,7 +92,7 @@ RUN python3 -m pip install \
             --cert ${BUILD_CERT} \
             'git+https://github.com/facebookresearch/detectron2.git';
 
-# Set a fixed model cache directory. Detectron2 requirement
+# set a fixed model cache directory. Detectron2 requirement
 ENV FVCORE_CACHE="/tmp"
 
 
@@ -94,16 +102,16 @@ RUN chmod 777 --recursive .
 
 
 ############# Setting up application runtime layer #############
-# Hop in the home directory where we have copied the source files
+# hop in the home directory where we have copied the source files
 RUN python3 -m pip install \
     --index-url ${PIP_INSTALL_LOCATION} \
     --cert ${BUILD_CERT} \
     .
 
-# Clean up any dangling conda resources
+# clean up any dangling conda resources
 RUN conda clean -afy
 
-# Make sure we expose our ports
+# make sure we expose our ports
 EXPOSE 8080
 
 ############# Inject model selection build configuration parameters #############
@@ -117,7 +125,7 @@ RUN adduser models
 RUN chown -R model:models ./
 USER models
 
-# Create a script to pass command line args to python
+# create a script to pass command line args to python
 RUN echo "python3 -m ${MODEL_ENTRY_POINT} \$@" >> /run_model.sh
 
 # Set the entry point command to the bin we created
