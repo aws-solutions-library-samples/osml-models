@@ -27,10 +27,10 @@ RUN wget -c ${MINICONDA_URL} \
     && ln -s /usr/local/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
 # add conda and local installs to the path so we can execute them
-ENV PATH=/usr/local/:/usr/local/bin:$PATH
+ENV PATH=/usr/local/:/usr/local/bin:${PATH}
 
 # update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/bin:/usr/include:/usr/local/:$LD_LIBRARY_PATH
+ENV LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/bin:/usr/include:/usr/local/:${LD_LIBRARY_PATH}
 
 # disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
