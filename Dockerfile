@@ -27,10 +27,10 @@ RUN wget -c ${MINICONDA_URL} \
     && rm ${MINICONDA_VERSION}.sh
 
 # Update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/:/usr/include:/usr/local/:/usr/local/bin"
 
 # Update the PATH to ensure the user bins can be found
-ENV PATH="${PATH}:/usr/local/"
+ENV PATH="${PATH}:/usr/local/:/usr/local/bin"
 # Disable NNPACK since we don't do training with this container
 ENV USE_NNPACK=0
 
@@ -111,6 +111,11 @@ EXPOSE 8080
 ARG MODEL_SELECTION
 ENV MODEL_SELECTION=$MODEL_SELECTION
 ENV MODEL_ENTRY_POINT="aws.osml.models.${MODEL_SELECTION}.app"
+
+# set up a user to run the container as and assume it
+RUN adduser models
+RUN chown -R model:models ./
+USER models
 
 # Create a script to pass command line args to python
 RUN echo "python3 -m ${MODEL_ENTRY_POINT} \$@" >> /run_model.sh
