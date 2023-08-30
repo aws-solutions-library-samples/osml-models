@@ -1,0 +1,43 @@
+{
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "geometry": {
+          "coordinates": [
+            0,
+            0
+          ],
+          "type": "Point"
+        },
+        "id": "d2976db42a92b5f27d421ba7d4ccfc7e",
+        "properties": {
+          "bounds_imcoords": [
+            188.09933471679688,
+            271.49371337890625,
+            334.47198486328125,
+            350.0801086425781
+          ],
+           "bounds_imcoords": [
+              [100.0, 0.0],
+              [101.0, 0.0],
+              [101.0, 1.0],
+              [100.0, 1.0],
+              [100.0, 0.0]
+          ],
+          "polygon_imcoords" : [
+              [102.0, 0.0],
+              [103.0, 1.0],
+              [104.0, 0.0],
+              [105.0, 1.0]
+          ],                
+          "detection_score": 0.9873793125152588,
+          "feature_types": {
+            "airplane": 0.9873793125152588
+          },
+          "image_id": "79d7c3d5c81a8870f03a3032e2a2c0da"
+        },
+        "type": "Feature"
+      }
+    ]
+  }
+
