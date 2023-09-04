@@ -104,3 +104,32 @@ def detect_to_geojson_dict(
         },
         "type": "Feature",
     }
+
+
+def detect_to_geojson_segmentation_dict(
+    fixed_object_bbox: List[float], fixed_object_polygon: List[float],
+    detection_score: Optional[float] = 1.0, detection_type: Optional[str] = "sample_object"
+) -> dict:
+    """
+    Convert the bbox object into a sample GeoJSON formatted detection. Note
+    that the world coordinates are not normally provided by the model container,
+    so they're defaulted to 0,0 here since GeoJSON features require a geometry.
+
+    :param detection_type: the class of the detection
+    :param detection_score: the confidence score of the detection
+    :param fixed_object_bbox:  Bounding box to transform into a geojson feature
+    :param fixed_object_polygon:  Polygonal object to transform into a geojson feature
+    :return: dict: dictionary representation of a geojson feature
+    """
+    return {
+        "geometry": {"coordinates": [0.0, 0.0], "type": "Point"},
+        "id": token_hex(16),
+        "properties": {
+            "bounds_imcoords": fixed_object_bbox,
+            "polygon_imcoords": fixed_object_polygon,
+            "detection_score": detection_score,
+            "feature_types": {detection_type: detection_score},
+            "image_id": token_hex(16),
+        },
+        "type": "Feature",
+    }
