@@ -38,19 +38,21 @@ def gen_center_point_and_polygon_detect(width: int, height: int, bbox_percentage
     """
     this draws a polygon with the same center
     and width and height percentage
-    polygon can be a circle, or a hexagon, based on 
+    polygon can be a circle, or a hexagon, or triangle, etc - based on the number_of_vertices
+    there is a chance this is not centered as we'd like - meanwhile this will work as-is
+    TODO: revisit and ensure geometry is centered
     """
     
-    center = (width / 2, height / 2)
+    center = 0,0 # unit circle #(width / 2, height / 2)
     radius = bbox_percentage
-    number_of_vertices = 6 #20 is a nice circle, 3 is a triangle, etc
+    number_of_vertices = 6 # 20 is a nice circle, 3 is a triangle, etc
     circle = CirclePolygon(center,radius, resolution=number_of_vertices)
     poly_path = circle.get_path().vertices.tolist()
-    # poly_path.append(coord[0]) # this may best be done downstream in real model, not necessary now thx to matplotlib.
-    # TODO: discuss w/ Dr Duhe
-    # that's in unit coordinates, let's project to the correct percentage of our image coordinates
+    poly_path.append(poly_path[0]) # this is part of model vendor requirements, to have (only) closed polygons
+    nonzero_circle = [((x+1)/2,(y+1)/2) for (x,y) in poly_path] # this moves poly to nonzero 0-1 coords
+    # let's project to the correct percentage of our image coordinates
     poly_scale = [bbox_percentage*width,bbox_percentage*height]
-    scaled_circle = [(x*poly_scale[0],y*poly_scale[1]) for (x,y) in poly_path]
+    scaled_circle = [(x*poly_scale[0],y*poly_scale[1]) for (x,y) in nonzero_circle]
 
     return detect_to_geojson_segmentation_dict(fixed_object_bbox, scaled_circle)
 
