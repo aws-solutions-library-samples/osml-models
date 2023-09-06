@@ -12,7 +12,8 @@ from detectron2.engine import DefaultPredictor
 from flask import Flask, Response, request
 from osgeo import gdal
 
-from aws.osml.models import detect_to_geojson_dict, load_image, setup_server
+from aws.osml.models.server_utils import load_image, setup_server
+from aws.osml.models.server_utils import detect_and_mask_to_geojson_dict
 
 app = Flask(__name__)
 
@@ -40,7 +41,7 @@ def healthcheck() -> Response:
 
     :return: a successful status code (200) indicates all is well
     """
-    app.logger.info("Responding to health check from aircraft segmentation")
+    app.logger.debug("Responding to health check from aircraft segmentation")
     return Response(response="\n", status=200)
 
 
@@ -68,7 +69,7 @@ def predict() -> Response:
         # Pull out the width and height from the dataset
         width, height = ds.RasterXSize, ds.RasterYSize
 
-        app.logger.debug(f"Processing image of size: {width}x{height} with flood model.")
+        app.logger.debug(f"Processing image of size: {width}x{height}")
 
         # Set up a FeatureCollection to store our generated Features
         json_results = {"type": "FeatureCollection", "features": []}
@@ -96,12 +97,15 @@ def predict() -> Response:
                 # get the bboxes for this image
                 boxes = instances.pred_boxes.tensor.cpu().numpy().tolist()
 
+                # get the polygons for this image
+                masks = instances.pred_masks.cpu().numpy()
+
                 # get the scores for this image
                 scores = instances.scores.cpu().numpy().tolist()
 
-                # concert our bboxes to geojson FeatureCollections
+                # convert our bboxes to geojson FeatureCollections
                 for i in range(0, len(boxes)):
-                    detects.append(detect_to_geojson_dict(boxes[i], scores[i], "airplane"))
+                    detects.append(detect_and_mask_to_geojson_dict(boxes[i], masks[i], scores[i], "airplane"))
 
         # generate a plane detection from D2 pretrained model
         json_results["features"].extend(detects)

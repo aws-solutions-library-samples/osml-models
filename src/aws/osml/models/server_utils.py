@@ -8,6 +8,9 @@ from typing import List, Optional, Union
 from flask import Flask, Request
 from osgeo import gdal
 
+# for segmentation 
+import numpy as np
+import cv2
 
 def setup_server(app: Flask):
     """
@@ -105,6 +108,72 @@ def detect_to_geojson_dict(
         "type": "Feature",
     }
 
+
+def convert_mask_to_polygon(mask: np.ndarray) -> List[float]:
+    """
+    converts a detectron 2 mask (or really any image) into a polygonal line.
+
+    note this version only returns continuous polygons per detection with no holes.
+    handling other topologies is left for the future, note 'has_holes' as a hook & logged warning
+    :param mask: the instance mask from forward pass
+    """
+
+    mask = np.ascontiguousarray(mask)  # some versions of cv2 does not support incontiguous arr
+    # per https://docs.opencv.org/4.x/d3/dc0/group__imgproc__shape.html
+    # NONE is default, but we don't need every pixel. after testing, using TC89_KCOS as it's 1/5 of coords 
+    res = cv2.findContours(mask.astype("uint8"), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_TC89_KCOS) 
+    hierarchy = res[-1] 
+    has_holes = (hierarchy.reshape(-1, 4)[:, 3] >= 0).sum() > 0
+    if has_holes:
+        logging.warning(f" detection mask has holes that we ignore")
+    res = res[-2]
+    res = [x.flatten() for x in res]
+
+    # ok now let's convert those to 'coordinates'
+    length = int(res[0].shape[0]/2)
+    coords = res[0].reshape((length, 2))
+
+    # and lets close the polygon to ensure geojson standard
+    poly = coords.tolist()
+    poly.append(poly[0])
+    
+    return poly
+
+
+# this method is used in the 'airplane-segmentation' model.
+def detect_and_mask_to_geojson_dict(
+    fixed_object_bbox: List[float], fixed_object_mask: np.ndarray,
+    detection_score: Optional[float] = 1.0, detection_type: Optional[str] = "sample_object"
+) -> dict:
+    """
+    Convert the bbox object into a sample GeoJSON formatted detection. Note
+    that the world coordinates are not normally provided by the model container,
+    so they're defaulted to 0,0 here since GeoJSON features require a geometry.
+
+    :param detection_type: the class of the detection
+    :param detection_score: the confidence score of the detection
+    :param fixed_object_bbox:  Bounding box to transform into a geojson feature
+    :param fixed_object_mask:  Detection Mask to transform into a polygonal geojson feature
+    :return: dict: dictionary representation of a geojson feature
+    """
+
+    return {
+        "geometry": {"coordinates": [0.0, 0.0], "type": "Point"},
+        "id": token_hex(16),
+        "properties": {
+            "bounds_imcoords": fixed_object_bbox,
+            "polygon_imcoords": convert_mask_to_polygon(fixed_object_mask),
+            "detection_score": detection_score,
+            "feature_types": {detection_type: detection_score},
+            "image_id": token_hex(16),
+        },
+        "type": "Feature",
+    }
+
+# this method is used in the 'centerpoint-segmentation' mock model.
+# only difference is this accepts a polygonal list vs a mask as above
+# TODO: refactor update centerpoint-segmentation to return a mask
+# then we can remove this function, and only use above for both models.
 
 def detect_to_geojson_segmentation_dict(
     fixed_object_bbox: List[float], fixed_object_polygon: List[float],

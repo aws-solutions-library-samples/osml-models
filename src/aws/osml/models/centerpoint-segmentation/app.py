@@ -16,7 +16,6 @@ app = Flask(__name__)
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
 NUM_VERTICES = float(os.environ.get("NUM_VERTICES", 6))
 
-
 def gen_center_point_and_polygon_detect(width: int, height: int, bbox_percentage: float) -> dict:
     """
     Create a single detection bbox and circular polygon that is at the center of and sized proportionally to the image
@@ -39,8 +38,11 @@ def gen_center_point_and_polygon_detect(width: int, height: int, bbox_percentage
     this draws a polygon with the same center
     and width and height percentage
     polygon can be a circle, or a hexagon, or triangle, etc - based on the number_of_vertices
-    there is a chance this is not centered as we'd like - meanwhile this will work as-is
-    TODO: revisit and ensure geometry is centered
+    there is a chance this is not centered as we'd like - meanwhile this will work as-is for initial OSML segmentation 'passthrough'
+    
+    TODO: revisit and ensure geometry is centered. 
+          Also consider returning a mask instead of a polygon, 
+          so we can use the unified detect_and_mask_to_geojson_dict instead of 'old' detect_to_geojson_segmentation_dict
     """
     
     center = 0,0 # unit circle #(width / 2, height / 2)
@@ -64,7 +66,7 @@ def healthcheck() -> Response:
 
     :return: a successful status code (200) indicates all is well
     """
-    app.logger.info("Responding to health check from centerpoint segmentation")
+    app.logger.debug("Responding to health check from centerpoint segmentation")
     return Response(response="\n", status=200)
 
 
