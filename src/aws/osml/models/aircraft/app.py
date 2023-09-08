@@ -18,21 +18,31 @@ ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", False)
 
 app = Flask(__name__)
 
-# load the prebuilt plane model w/ Detectron2
-cfg = get_cfg()
-# if we can't find a gpu
-if not torch.cuda.is_available():
-    cfg.MODEL.DEVICE = "cpu"
-# set the number of classes we expect
-cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
-cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
-# add project-specific config used for training to remove warnings
-cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
-# path to the model weights we trained
-cfg.MODEL.WEIGHTS = os.getenv(os.path.join("MODEL_WEIGHTS"), os.path.join("/home/assets/", "model_weights.pth"))
+
+def build_predictor() -> DefaultPredictor:
+    """
+    Create a single detection predictor to detect aircraft
+    :return: DefaultPredictor
+    """
+    # load the prebuilt plane model w/ Detectron2
+    cfg = get_cfg()
+    # if we can't find a gpu
+    if not torch.cuda.is_available():
+        cfg.MODEL.DEVICE = "cpu"
+    # set the number of classes we expect
+    cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+    # add project-specific config used for training to remove warnings
+    cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
+    # path to the model weights we trained
+    cfg.MODEL.WEIGHTS = os.getenv(os.path.join("MODEL_WEIGHTS"), os.path.join("/home/assets/", "model_weights.pth"))
+
+    # build the default predictor
+    return DefaultPredictor(cfg)
+
 
 # build the default predictor
-plane_predictor = DefaultPredictor(cfg)
+plane_predictor = build_predictor()
 
 
 @app.route("/ping", methods=["GET"])
