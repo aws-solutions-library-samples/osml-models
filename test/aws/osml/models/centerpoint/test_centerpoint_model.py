@@ -5,12 +5,10 @@ import os
 import unittest
 
 
-class AppTestCase(unittest.TestCase):
-    os.environ["BBOX_PERCENTAGE"] = "0.1"
-
+class CenterpointModelTest(unittest.TestCase):
     def setUp(self):
         from aws.osml.models.centerpoint import app
-
+        os.environ["BBOX_PERCENTAGE"] = "0.1"
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()
@@ -28,7 +26,7 @@ class AppTestCase(unittest.TestCase):
         assert len(actual_geojson_result.get("features")) == len(expected_json_result.get("features"))
 
         for actual_result, expected_result in zip(
-            actual_geojson_result.get("features"), expected_json_result.get("features")
+                actual_geojson_result.get("features"), expected_json_result.get("features")
         ):
             assert actual_result.get("geometry") == expected_result.get("geometry")
 
