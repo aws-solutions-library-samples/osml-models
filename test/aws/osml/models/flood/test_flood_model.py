@@ -6,12 +6,10 @@ import unittest
 
 
 class FloodModelTest(unittest.TestCase):
-    os.environ["BBOX_PERCENTAGE"] = "0.1"
-    os.environ["FLOOD_VOLUME"] = "500"
 
     def setUp(self):
         from aws.osml.models.flood import app
-
+        os.environ["FLOOD_VOLUME"] = "500"
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()

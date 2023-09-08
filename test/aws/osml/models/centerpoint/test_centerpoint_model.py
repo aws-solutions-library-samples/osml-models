@@ -8,7 +8,7 @@ import unittest
 class CenterpointModelTest(unittest.TestCase):
     def setUp(self):
         from aws.osml.models.centerpoint import app
-        os.environ["BBOX_PERCENTAGE"] = "0.1"
+        os.environ["ENABLE_SEGMENTATION"] = "True"
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()
