@@ -12,7 +12,9 @@ from detectron2.engine import DefaultPredictor
 from flask import Flask, Response, request
 from osgeo import gdal
 
-from aws.osml.models import detect_to_geojson_dict, load_image, setup_server
+from aws.osml.models import detect_to_geojson, load_image, setup_server
+
+ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", False)
 
 app = Flask(__name__)
 
@@ -99,11 +101,19 @@ def predict() -> Response:
                 # get the scores for this image
                 scores = instances.scores.cpu().numpy().tolist()
 
+                if ENABLE_SEGMENTATION is True:
+                    # get the polygons for this image
+                    masks = instances.pred_masks.cpu().numpy()
+                else:
+                    masks = None
                 # concert our bboxes to geojson FeatureCollections
                 for i in range(0, len(boxes)):
-                    detects.append(detect_to_geojson_dict(boxes[i], scores[i], "airplane"))
+                    if masks is not None:
+                        detects.append(detect_to_geojson(boxes[i], masks[i], scores[i], "airplane"))
+                    else:
+                        detects.append(detect_to_geojson(boxes[i], None, scores[i], "airplane"))
 
-        # generate a plane detection from D2 pretrained model
+        # generate a plane detection from a D2 pretrained model
         json_results["features"].extend(detects)
 
         app.logger.debug("Sending success response to requester.")
@@ -117,5 +127,6 @@ def predict() -> Response:
         del ds
 
 
-if __name__ == "__main__":  # pragma: no cover
+# pragma: no cover
+if __name__ == "__main__":
     setup_server(app)

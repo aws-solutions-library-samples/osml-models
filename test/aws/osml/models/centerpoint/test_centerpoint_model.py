@@ -22,7 +22,8 @@ class AppTestCase(unittest.TestCase):
         response = self.client.get("/ping")
         assert response.status_code == 200
 
-    def compare_two_geojson_results(self, actual_geojson_result, expected_json_result):
+    @staticmethod
+    def compare_two_geojson_results(actual_geojson_result, expected_json_result):
         assert actual_geojson_result.get("type") == expected_json_result.get("type")
         assert len(actual_geojson_result.get("features")) == len(expected_json_result.get("features"))
 
@@ -31,8 +32,8 @@ class AppTestCase(unittest.TestCase):
         ):
             assert actual_result.get("geometry") == expected_result.get("geometry")
 
-            # Current issue is that comparing both geojson files will fail due to unique image_id
-            # To overcome that issue, overwrite expected image_id with actual image_id
+            # There is an issue is that comparing both geojson files will fail due to unique image_id;
+            # to overcome that issue, overwrite expected image_id with actual image_id
             actual_image_id = actual_result["properties"]["image_id"]
             expected_result["properties"]["image_id"] = actual_image_id
 
