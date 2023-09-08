@@ -37,9 +37,9 @@ Here's a brief description of the supported branches in our repository:
 |:-----------------|:-----------|:-------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `main`           | YES        | N/A                | What is live in production (**stable**).<br/>A pull request is required to merge code into `main`.                                                                                                            |
 | `dev`            | YES        | `main`             | The latest state of development (**unstable**).                                                                                                                                                               |
-| `feature-*`      | NO         | `dev`              | Cutting-edge features (**unstable**). These branches are used for any maintenance features / active development.                                                                                              |
+| `feature/*`      | NO         | `dev`              | Cutting-edge features (**unstable**). These branches are used for any maintenance features / active development.                                                                                              |
 | `release-vX.Y.Z` | NO         | `dev`              | A temporary release branch that follows the [semver](http://semver.org/) versioning. This is what is sent to UAT.<br/>A pull request is required to merge code into any `release-vX.Y.Z` branch.              |
-| `hotfix-*`       | NO         | `main`             | These are bug fixes against production.<br/>This is used because develop might have moved on from the last published state.<br/>Remember to merge this back into develop and any release branches.            |
+| `hotfix/*`       | NO         | `main`             | These are bug fixes against production.<br/>This is used because develop might have moved on from the last published state.<br/>Remember to merge this back into develop and any release branches.            |
 
 ## Use Cases
 
