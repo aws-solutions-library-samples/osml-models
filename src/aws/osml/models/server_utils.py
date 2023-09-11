@@ -172,8 +172,6 @@ def detect_and_mask_to_geojson_dict(
 
 # this method is used in the 'centerpoint-segmentation' mock model.
 # only difference is this accepts a polygonal list vs a mask as above
-# TODO: refactor update centerpoint-segmentation to return a mask
-# then we can remove this function, and only use above for both models.
 
 def detect_to_geojson_segmentation_dict(
     fixed_object_bbox: List[float], fixed_object_polygon: List[float],
