@@ -45,16 +45,17 @@ def gen_center_point_and_polygon_detect(width: int, height: int, bbox_percentage
           so we can use the unified detect_and_mask_to_geojson_dict instead of 'old' detect_to_geojson_segmentation_dict
     """
     
-    center = 0,0 # unit circle #(width / 2, height / 2)
+    center = 0,0
     radius = bbox_percentage
     number_of_vertices = 6 # 20 is a nice circle, 3 is a triangle, etc
     circle = CirclePolygon(center,radius, resolution=number_of_vertices)
     poly_path = circle.get_path().vertices.tolist()
-    poly_path.append(poly_path[0]) # this is part of model vendor requirements, to have (only) closed polygons
+    poly_path.append(poly_path[0]) # this is part of CV model requirements, to have (only) closed polygons
     nonzero_circle = [((x+1)/2,(y+1)/2) for (x,y) in poly_path] # this moves poly to nonzero 0-1 coords
     # let's project to the correct percentage of our image coordinates
     poly_scale = [bbox_percentage*width,bbox_percentage*height]
-    scaled_circle = [(x*poly_scale[0],y*poly_scale[1]) for (x,y) in nonzero_circle]
+    # and do final scaling of coordaintes, and w/h translation to ensure within bounds of the bbox
+    scaled_circle = [(x*poly_scale[0]+center_xy[0],y*poly_scale[1]+center_xy[1]) for (x,y) in nonzero_circle]
 
     return detect_to_geojson_segmentation_dict(fixed_object_bbox, scaled_circle)
 
