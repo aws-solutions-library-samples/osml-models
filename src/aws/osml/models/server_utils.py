@@ -111,7 +111,7 @@ def detect_to_geojson(
         "type": "Feature",
     }
 
-    if fixed_object_mask is not None:
+    if fixed_object_mask.any():
         geojson["polygon_imcoords"] = (mask_to_polygon(fixed_object_mask))
 
     return geojson
