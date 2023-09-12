@@ -74,7 +74,8 @@ def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -
     # we don't need the w,h - but we'll verify they're the same / as expected
     assert w == width
     # convert to a NumPy array,
-    mask = np.frombuffer(s, np.uint8).reshape((h, w, 4)).copy()
+    x = np.frombuffer(s, np.uint8).reshape((h, w, 4))
+    mask = x.copy()
     mask = mask[:, :, 0]
     mask[mask == 255] = 0
     mask[mask > 0] = 1
