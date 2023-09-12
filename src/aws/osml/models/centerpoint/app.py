@@ -6,6 +6,8 @@ from json import dumps
 
 import numpy as np
 from flask import Flask, Response, request
+from matplotlib.backends.backend_agg import FigureCanvasAgg
+from matplotlib.figure import Figure
 from matplotlib.patches import CirclePolygon
 
 from aws.osml.models.server_utils import detect_to_geojson, load_image, setup_server
@@ -50,22 +52,34 @@ def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -
     """
 
     fixed_object_bbox = gen_center_bbox(width, height, bbox_percentage)
-    # unit circle # (width / 2, height / 2)
-    center = 0, 0
-    center_xy = width / 2, height / 2
-    # Twenty is a nice circle, three is a triangle, etc
-    number_of_vertices = 6
-    circle = CirclePolygon(center, bbox_percentage, resolution=number_of_vertices)
-    poly_path = circle.get_path().vertices.tolist()
-    # model vendor requirements, to have (only) closed polygons
-    poly_path.append(poly_path[0])
-    # converts poly to nonzero 0-1 coords
-    nonzero_circle = [((x + 1) / 2, (y + 1) / 2) for (x, y) in poly_path]
-    # project to the correct percentage of our image coordinates
-    poly_scale = [bbox_percentage * width, bbox_percentage * height]
-    # scale the circle it to the image
-    scaled_circle = [(x * poly_scale[0] + center_xy[0], y * poly_scale[1] + center_xy[1]) for (x, y) in nonzero_circle]
-    return detect_to_geojson(fixed_object_bbox, scaled_circle)
+    fig = Figure(figsize=(width / 100, height / 100), dpi=100)
+    fig.tight_layout(pad=0)
+    canvas = FigureCanvasAgg(fig)
+
+    center = (.5, .5)
+    radius = 0.2
+    circle = CirclePolygon(center, radius, resolution=6)
+
+    ax = fig.add_subplot()
+    ax.margins(0)
+    ax.axis('off')
+    ax.set_aspect('equal')
+    ax.add_patch(circle)
+
+    # Retrieve a view on the renderer buffer
+    canvas.draw()
+    # fig.savefig("test.png")
+
+    s, (w, h) = canvas.print_to_buffer()
+    # we don't need the w,h - but we'll verify they're the same / as expected
+    assert w == width
+    # convert to a NumPy array,
+    mask = np.frombuffer(s, np.uint8).reshape((h, w, 4)).copy()
+    mask = mask[:, :, 0]
+    mask[mask == 255] = 0
+    mask[mask > 0] = 1
+
+    return detect_to_geojson(fixed_object_bbox, mask)
 
 
 def gen_center_point_detect(width: int, height: int, bbox_percentage: float) -> dict:
