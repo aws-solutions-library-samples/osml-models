@@ -6,6 +6,7 @@ import unittest
 
 
 class CenterpointModelTest(unittest.TestCase):
+
     def setUp(self):
         from aws.osml.models.centerpoint import app
         self.ctx = app.app_context()
@@ -14,7 +15,6 @@ class CenterpointModelTest(unittest.TestCase):
 
     def tearDown(self):
         self.ctx.pop()
-        self.client.environ_base = {}
 
     def test_ping(self):
         response = self.client.get("/ping")
@@ -43,7 +43,7 @@ class CenterpointModelTest(unittest.TestCase):
 
         assert response.status_code == 200
 
-        sample_output = "test/sample_data/sample_center_point_model_output.geojson"
+        sample_output = "test/sample_data/sample_centerpoint_model_output.geojson"
         with open(sample_output, "r") as model_output_geojson:
             expected_json_result = json.loads(model_output_geojson.read())
 

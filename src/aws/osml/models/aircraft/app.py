@@ -5,7 +5,6 @@ from json import dumps
 from typing import List
 
 import cv2
-import numpy as np
 import torch
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
@@ -15,7 +14,7 @@ from osgeo import gdal
 
 from aws.osml.models import detect_to_geojson, load_image, setup_server, mask_to_polygon
 
-ENABLE_SEGMENTATION = str(os.environ.get("ENABLE_SEGMENTATION", False))
+ENABLE_SEGMENTATION = bool(os.environ.get("ENABLE_SEGMENTATION", False))
 
 app = Flask(__name__)
 

@@ -6,6 +6,7 @@ import unittest
 
 
 class AppTestCase(unittest.TestCase):
+    os.environ["ENABLE_SEGMENTATION"] = "True"
 
     def setUp(self):
         from aws.osml.models.aircraft import app
