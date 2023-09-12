@@ -22,7 +22,7 @@
           "airplane": 0.9873794317245483
         },
         "image_id": "d12e73cdd4e74e6682ed08a85dcab265",
-        "polygon_imcoords": [
+        "geom_imcoords": [
           [
             192,
             272
@@ -312,7 +312,7 @@
           "airplane": 0.9852103590965271
         },
         "image_id": "ce2883a01c46950b0e66c58cfaab667e",
-        "polygon_imcoords": [
+        "geom_imcoords": [
           [
             153,
             134

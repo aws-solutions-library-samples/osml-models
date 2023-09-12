@@ -22,7 +22,7 @@
           "sample_object": 1
         },
         "image_id": "673c80a467182c1c1252d83631c52780",
-        "polygon_imcoords": [
+        "geom_imcoords": [
           [
             281.6,
             307.2

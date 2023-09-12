@@ -112,7 +112,7 @@ def detect_to_geojson(
     }
 
     if fixed_object_mask is not None:
-        geojson["properties"]["polygon_imcoords"] = fixed_object_mask
+        geojson["properties"]["geom_imcoords"] = fixed_object_mask
 
     return geojson
 
@@ -139,11 +139,11 @@ def mask_to_polygon(mask: np.ndarray) -> list[tuple[float, float]]:
     res = res[-2]
     res = [x.flatten() for x in res]
 
-    # ok now let's convert those to 'coordinates'
+    # convert those to 'coordinates'
     length = int(res[0].shape[0] / 2)
     coords = res[0].reshape((length, 2))
 
-    # and let's close the polygon to ensure geojson standard
+    # close the polygon to ensure geojson standard
     poly = coords.tolist()
     poly.append(poly[0])
 

@@ -3,6 +3,7 @@
 import logging
 import os
 from json import dumps
+from typing import List, Dict, Any
 
 from flask import Flask, Response, request
 from matplotlib.patches import CirclePolygon
@@ -16,13 +17,13 @@ BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
 ENABLE_SEGMENTATION = bool(os.environ.get("ENABLE_SEGMENTATION", False))
 
 
-def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> list:
+def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> List[float]:
     """
     Create a single detection bbox that is at the center of and sized proportionally to the image
     :param bbox_percentage: the size of the bounding box and poly, relative to the image, to return
     :param width: Raster width of the image passed in
     :param height: Raster height of the image passed in
-    :return:
+    :return:bbox: Segmented bbox array for center detection
     """
     center_xy = width / 2, height / 2
     fixed_object_size_xy = width * bbox_percentage, height * bbox_percentage
@@ -34,7 +35,7 @@ def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> list:
     ]
 
 
-def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -> dict:
+def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -> Dict[str, Any]:
     """
     Create  circular polygon that is at the center of and sized proportionally to the bbox
     :param bbox_percentage: the size of the bounding box and poly, relative to the image, to return
