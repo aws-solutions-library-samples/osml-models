@@ -5,6 +5,7 @@ from json import dumps
 from typing import List
 
 import cv2
+import numpy as np
 import torch
 from detectron2 import model_zoo
 from detectron2.config import get_cfg
@@ -12,7 +13,7 @@ from detectron2.engine import DefaultPredictor
 from flask import Flask, Response, request
 from osgeo import gdal
 
-from aws.osml.models import detect_to_geojson, load_image, setup_server
+from aws.osml.models import detect_to_geojson, load_image, setup_server, mask_to_polygon
 
 ENABLE_SEGMENTATION = bool(os.environ.get("ENABLE_SEGMENTATION", False))
 
@@ -118,7 +119,7 @@ def predict() -> Response:
                 # concert our bboxes to geojson FeatureCollections
                 for i in range(0, len(boxes)):
                     if masks is not None:
-                        detects.append(detect_to_geojson(boxes[i], masks[i], scores[i], "airplane"))
+                        detects.append(detect_to_geojson(boxes[i], mask_to_polygon(masks[i]), scores[i], "airplane"))
                     else:
                         detects.append(detect_to_geojson(boxes[i], None, scores[i], "airplane"))
 
