@@ -10,6 +10,9 @@ import numpy as np
 from flask import Flask, Request
 from osgeo import gdal
 
+# enable exceptions for GDAL
+gdal.UseExceptions()
+
 
 def setup_server(app: Flask):
     """
