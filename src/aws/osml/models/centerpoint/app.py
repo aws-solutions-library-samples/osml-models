@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
-ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", "False")
+ENABLE_SEGMENTATION = str(os.environ.get("ENABLE_SEGMENTATION", "False"))
 
 
 def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> list:

@@ -15,7 +15,7 @@ from osgeo import gdal
 
 from aws.osml.models import detect_to_geojson, load_image, setup_server, mask_to_polygon
 
-ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", False)
+ENABLE_SEGMENTATION = str(os.environ.get("ENABLE_SEGMENTATION", "False"))
 
 app = Flask(__name__)
 
