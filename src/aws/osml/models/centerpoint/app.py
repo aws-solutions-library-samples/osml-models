@@ -51,38 +51,20 @@ def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -
     center_xy = width / 2, height / 2
     fixed_object_bbox = gen_center_bbox(width, height, bbox_percentage)
     radius = bbox_percentage
-    number_of_vertices = 6  # 20 is a nice circle, 3 is a triangle, etc
+    # 20 is a nice circle, 3 is a triangle, etc
+    number_of_vertices = 6
     circle = CirclePolygon(center, radius, resolution=number_of_vertices)
     poly_path = circle.get_path().vertices.tolist()
-    poly_path.append(poly_path[0])  # this is part of CV model requirements, to have (only) closed polygons
-    nonzero_circle = [((x + 1) / 2, (y + 1) / 2) for (x, y) in poly_path]  # this moves poly to nonzero 0-1 coords
+    # this is part of CV model requirements, to have (only) closed polygons
+    poly_path.append(poly_path[0])
+    # this moves poly to nonzero 0-1 coords
+    nonzero_circle = [((x + 1) / 2, (y + 1) / 2) for (x, y) in poly_path]
     # let's project to the correct percentage of our image coordinates
     poly_scale = [bbox_percentage * width, bbox_percentage * height]
     # and do final scaling of coordinates, and w/h translation to ensure within bounds of the bbox
-    scaled_circle = [(x * poly_scale[0] + center_xy[0], y * poly_scale[1] + center_xy[1]) for (x, y) in nonzero_circle]
+    center_polygon = [(x * poly_scale[0] + center_xy[0], y * poly_scale[1] + center_xy[1]) for (x, y) in nonzero_circle]
 
-    return detect_to_geojson(fixed_object_bbox, scaled_circle)
-
-
-def gen_center_point_detect(width: int, height: int, bbox_percentage: float) -> dict:
-    """
-    Create a single detection bbox that is at the center of and sized proportionally to the image.
-
-    :param bbox_percentage: Size of the bounding box, relative to the image, to return
-    :param width: Raster width of the image passed in
-    :param height: Raster height of the image passed in
-    :return:
-    """
-    center_xy = width / 2, height / 2
-    fixed_object_size_xy = width * bbox_percentage, height * bbox_percentage
-    fixed_object_bbox = [
-        center_xy[0] - fixed_object_size_xy[0],
-        center_xy[1] - fixed_object_size_xy[1],
-        center_xy[0] + fixed_object_size_xy[0],
-        center_xy[1] + fixed_object_size_xy[1],
-    ]
-
-    return detect_to_geojson(fixed_object_bbox)
+    return detect_to_geojson(fixed_object_bbox, center_polygon)
 
 
 @app.route("/ping", methods=["GET"])
@@ -126,7 +108,7 @@ def predict() -> Response:
         if ENABLE_SEGMENTATION is True:
             json_results["features"].append(gen_center_polygon_detect(width, height, BBOX_PERCENTAGE))
         else:
-            json_results["features"].append(gen_center_point_detect(width, height, BBOX_PERCENTAGE))
+            json_results["features"].append(detect_to_geojson(gen_center_bbox(width, height, BBOX_PERCENTAGE)))
 
         # send back the detections
         return Response(response=dumps(json_results), status=200)
