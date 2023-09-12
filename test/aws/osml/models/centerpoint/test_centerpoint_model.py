@@ -6,6 +6,7 @@ import unittest
 
 
 class CenterpointModelTest(unittest.TestCase):
+    os.environ["ENABLE_SEGMENTATION"] = "True"
 
     def setUp(self):
         from aws.osml.models.centerpoint import app
