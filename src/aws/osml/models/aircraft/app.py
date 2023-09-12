@@ -50,7 +50,7 @@ def healthcheck() -> Response:
     """
     This is a health check that will always pass since this is a stub model.
 
-    :return: a successful status code (200) indicates all is well
+    :return: Successful status code (200) indicates all is well
     """
     app.logger.debug("Responding to health check")
     return Response(response="\n", status=200)
@@ -62,7 +62,7 @@ def predict() -> Response:
     This is the model invocation endpoint for the model container's REST
     API. The binary payload, in this case an image, is taken from the request
     parsed to ensure it is a valid image. This is a stub implementation that
-    will always return fixed set of detections for a valid input image.
+    will always return a fixed set of detections for a valid input image.
 
     :return: Response: Contains the GeoJSON results or an error status
     """
