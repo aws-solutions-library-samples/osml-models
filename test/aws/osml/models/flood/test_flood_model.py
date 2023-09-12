@@ -6,10 +6,10 @@ import unittest
 
 
 class FloodModelTest(unittest.TestCase):
+    os.environ["FLOOD_VOLUME"] = "500"
 
     def setUp(self):
         from aws.osml.models.flood import app
-        os.environ["FLOOD_VOLUME"] = "500"
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()
@@ -26,11 +26,11 @@ class FloodModelTest(unittest.TestCase):
         assert len(actual_geojson_result.get("features")) == len(expected_json_result.get("features"))
 
         for actual_result, expected_result in zip(
-            actual_geojson_result.get("features"), expected_json_result.get("features")
+                actual_geojson_result.get("features"), expected_json_result.get("features")
         ):
             assert actual_result.get("geometry") == expected_result.get("geometry")
 
-            # Current issue is that comparing both geojson files will fail due to unique image_id
+            # The Current issue is that comparing both geojson files will fail due to unique image_id
             # To overcome that issue, overwrite expected image_id with actual image_id
             actual_image_id = actual_result["properties"]["image_id"]
             expected_result["properties"]["image_id"] = actual_image_id

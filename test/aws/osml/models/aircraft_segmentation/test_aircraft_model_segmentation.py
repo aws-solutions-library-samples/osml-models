@@ -11,9 +11,11 @@ class AppTestCase(unittest.TestCase):
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()
+        self.client.environ_base = {"ENABLE_SEGMENTATION": "True"}
 
     def tearDown(self):
         self.ctx.pop()
+        self.client.environ_base = {}
 
     def test_ping(self):
         response = self.client.get("/ping")
@@ -37,7 +39,7 @@ class AppTestCase(unittest.TestCase):
 
         actual_geojson_result = json.loads(response.data)
 
-        with open("test/sample_data/sample_aircraft_model_output.geojson", "r") as model_output_geojson:
+        with open("test/sample_data/sample_aircraft_model_segmentation_output.geojson", "r") as model_output_geojson:
             expected_json_result = json.loads(model_output_geojson.read())
             self.compare_two_geojson_results(actual_geojson_result, expected_json_result)
 

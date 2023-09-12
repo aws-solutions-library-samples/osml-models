@@ -6,15 +6,18 @@ import unittest
 
 
 class CenterpointModelSegmentationTest(unittest.TestCase):
+    os.environ["ENABLE_SEGMENTATION"] = "True"
+
     def setUp(self):
         from aws.osml.models.centerpoint import app
-        os.environ["ENABLE_SEGMENTATION"] = "True"
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()
+        self.client.environ_base = {"ENABLE_SEGMENTATION": "True"}
 
     def tearDown(self):
         self.ctx.pop()
+        self.client.environ_base = {}
 
     def test_ping(self):
         response = self.client.get("/ping")
@@ -43,7 +46,7 @@ class CenterpointModelSegmentationTest(unittest.TestCase):
 
         assert response.status_code == 200
 
-        sample_output = "test/sample_data/sample_aircraft_model_segmentation_output.geojson"
+        sample_output = "test/sample_data/sample_centerpoint_model_segmentation_output.geojson"
         with open(sample_output, "r") as model_output_geojson:
             expected_json_result = json.loads(model_output_geojson.read())
 
