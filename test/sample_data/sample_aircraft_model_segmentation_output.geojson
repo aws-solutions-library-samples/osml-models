@@ -9,7 +9,7 @@
         ],
         "type": "Point"
       },
-      "id": "242fb312e8acff1f0507d3a7f300f19f",
+      "id": "ccffe202edcd20f35511b41450dd1576",
       "properties": {
         "bounds_imcoords": [
           188.09933471679688,
@@ -17,6 +17,11 @@
           334.47198486328125,
           350.0801086425781
         ],
+        "detection_score": 0.9873794317245483,
+        "feature_types": {
+          "airplane": 0.9873794317245483
+        },
+        "image_id": "aac9b8fa80911f8381c1c86d45096eeb",
         "polygon_imcoords": [
           [
             192,
@@ -282,12 +287,7 @@
             192,
             272
           ]
-        ],
-        "detection_score": 0.9873793125152588,
-        "feature_types": {
-          "airplane": 0.9873793125152588
-        },
-        "image_id": "fc72afdcf03874566e53de582db9e319"
+        ]
       },
       "type": "Feature"
     },
@@ -299,14 +299,19 @@
         ],
         "type": "Point"
       },
-      "id": "7898a1d2bd4941b2e03af9d540f112f1",
+      "id": "e28caf133a07677e93a0f2b0426111bd",
       "properties": {
         "bounds_imcoords": [
-          147.6332550048828,
-          131.3967742919922,
+          147.63323974609375,
+          131.39678955078125,
           291.29302978515625,
-          206.61997985839844
+          206.6199493408203
         ],
+        "detection_score": 0.9852103590965271,
+        "feature_types": {
+          "airplane": 0.9852103590965271
+        },
+        "image_id": "7de719b1ad78e1a53734d9272fb1f2a6",
         "polygon_imcoords": [
           [
             153,
@@ -592,12 +597,7 @@
             153,
             134
           ]
-        ],
-        "detection_score": 0.9852103590965271,
-        "feature_types": {
-          "airplane": 0.9852103590965271
-        },
-        "image_id": "fb8d847196837bdd302e9fc28bd2af2f"
+        ]
       },
       "type": "Feature"
     }
