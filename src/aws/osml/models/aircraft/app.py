@@ -15,7 +15,7 @@ from osgeo import gdal
 
 from aws.osml.models import detect_to_geojson, load_image, setup_server, mask_to_polygon
 
-ENABLE_SEGMENTATION = str(os.environ.get("ENABLE_SEGMENTATION", "False"))
+ENABLE_SEGMENTATION = str(os.environ.get("ENABLE_SEGMENTATION", False))
 
 app = Flask(__name__)
 
@@ -111,7 +111,7 @@ def predict() -> Response:
                 # get the scores for this image
                 scores = instances.scores.cpu().numpy().tolist()
 
-                if ENABLE_SEGMENTATION is "True":
+                if ENABLE_SEGMENTATION is True:
                     # get the polygons for this image
                     masks = instances.pred_masks.cpu().numpy()
                 else:

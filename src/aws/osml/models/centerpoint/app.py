@@ -13,7 +13,7 @@ app = Flask(__name__)
 
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
-ENABLE_SEGMENTATION = str(os.environ.get("ENABLE_SEGMENTATION", "False"))
+ENABLE_SEGMENTATION = bool(os.environ.get("ENABLE_SEGMENTATION", False))
 
 
 def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> list:
@@ -107,7 +107,7 @@ def predict() -> Response:
         logging.debug(f"Processing image of size: {width}x{height} with flood model.")
         json_results = {"type": "FeatureCollection", "features": []}
 
-        if ENABLE_SEGMENTATION is "True":
+        if ENABLE_SEGMENTATION is True:
             json_results["features"].append(gen_center_polygon_detect(width, height, BBOX_PERCENTAGE))
         else:
             json_results["features"].append(detect_to_geojson(gen_center_bbox(width, height, BBOX_PERCENTAGE)))
