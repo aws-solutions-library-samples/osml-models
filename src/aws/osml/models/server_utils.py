@@ -3,7 +3,7 @@
 import argparse
 import logging
 from secrets import token_hex
-from typing import List, Optional, Union, Any
+from typing import List, Optional, Union
 
 import cv2
 import numpy as np
@@ -83,10 +83,10 @@ def load_image(request: Request) -> Union[gdal.Dataset, None]:
 
 
 def detect_to_geojson(
-        fixed_object_bbox: List[float],
-        fixed_object_mask: list[tuple[float, float]] = None,
-        detection_score: Optional[float] = 1.0,
-        detection_type: Optional[str] = "sample_object",
+    fixed_object_bbox: List[float],
+    fixed_object_mask: list[tuple[float, float]] = None,
+    detection_score: Optional[float] = 1.0,
+    detection_type: Optional[str] = "sample_object",
 ) -> dict:
     """
     Converts the bbox object into a sample GeoJSON formatted detection.

@@ -10,6 +10,7 @@ class AppTestCase(unittest.TestCase):
 
     def setUp(self):
         from aws.osml.models.aircraft import app
+
         self.ctx = app.app_context()
         self.ctx.push()
         self.client = app.test_client()
