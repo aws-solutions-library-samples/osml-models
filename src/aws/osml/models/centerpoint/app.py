@@ -64,8 +64,8 @@ def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -
     # project to the correct percentage of our image coordinates
     poly_scale = [bbox_percentage * width, bbox_percentage * height]
     # scale the circle it to the image
-    scaled_circle = [(x*poly_scale[0]+center_xy[0],y*poly_scale[1]+center_xy[1]) for (x,y) in nonzero_circle]
-    return detect_to_geojson(fixed_object_bbox, np.array(scaled_circle))
+    scaled_circle = [(x * poly_scale[0] + center_xy[0], y * poly_scale[1] + center_xy[1]) for (x, y) in nonzero_circle]
+    return detect_to_geojson(fixed_object_bbox, scaled_circle)
 
 
 def gen_center_point_detect(width: int, height: int, bbox_percentage: float) -> dict:
