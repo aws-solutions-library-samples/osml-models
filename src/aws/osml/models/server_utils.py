@@ -3,7 +3,7 @@
 import argparse
 import logging
 from secrets import token_hex
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 
 import cv2
 import numpy as np
@@ -87,10 +87,10 @@ def load_image(request: Request) -> Union[gdal.Dataset, None]:
 
 def detect_to_geojson(
     fixed_object_bbox: List[float],
-    fixed_object_mask: list[tuple[float, float]] = None,
+    fixed_object_mask: List[tuple[float, float]] = None,
     detection_score: Optional[float] = 1.0,
     detection_type: Optional[str] = "sample_object",
-) -> dict:
+) -> Dict[str, Any]:
     """
     Converts the bbox object into a sample GeoJSON formatted detection.
     The model container does not normally provide the world coordinates,
@@ -120,7 +120,7 @@ def detect_to_geojson(
     return geojson
 
 
-def mask_to_polygon(mask: np.ndarray) -> list[tuple[float, float]]:
+def mask_to_polygon(mask: np.ndarray) -> List[tuple[float, float]]:
     """
     Converts a detectron2 mask (or really any image) into a polygonal line.
     Note this version only returns continuous polygons per detection with no holes.
