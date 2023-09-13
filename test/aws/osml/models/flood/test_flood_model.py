@@ -5,8 +5,7 @@ import os
 import unittest
 
 
-class AppTestCase(unittest.TestCase):
-    os.environ["BBOX_PERCENTAGE"] = "0.1"
+class FloodModelTest(unittest.TestCase):
     os.environ["FLOOD_VOLUME"] = "500"
 
     def setUp(self):
@@ -32,7 +31,7 @@ class AppTestCase(unittest.TestCase):
         ):
             assert actual_result.get("geometry") == expected_result.get("geometry")
 
-            # Current issue is that comparing both geojson files will fail due to unique image_id
+            # The Current issue is that comparing both geojson files will fail due to unique image_id
             # To overcome that issue, overwrite expected image_id with actual image_id
             actual_image_id = actual_result["properties"]["image_id"]
             expected_result["properties"]["image_id"] = actual_image_id

@@ -137,5 +137,4 @@ RUN chown -R model:model ./
 USER model
 
 # set the entry point script
-#ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "sleep 180"]
 ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]

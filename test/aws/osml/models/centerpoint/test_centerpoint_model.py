@@ -5,8 +5,8 @@ import os
 import unittest
 
 
-class AppTestCase(unittest.TestCase):
-    os.environ["BBOX_PERCENTAGE"] = "0.1"
+class CenterpointModelTest(unittest.TestCase):
+    os.environ["ENABLE_SEGMENTATION"] = "True"
 
     def setUp(self):
         from aws.osml.models.centerpoint import app
@@ -22,7 +22,8 @@ class AppTestCase(unittest.TestCase):
         response = self.client.get("/ping")
         assert response.status_code == 200
 
-    def compare_two_geojson_results(self, actual_geojson_result, expected_json_result):
+    @staticmethod
+    def compare_two_geojson_results(actual_geojson_result, expected_json_result):
         assert actual_geojson_result.get("type") == expected_json_result.get("type")
         assert len(actual_geojson_result.get("features")) == len(expected_json_result.get("features"))
 
@@ -31,8 +32,8 @@ class AppTestCase(unittest.TestCase):
         ):
             assert actual_result.get("geometry") == expected_result.get("geometry")
 
-            # Current issue is that comparing both geojson files will fail due to unique image_id
-            # To overcome that issue, overwrite expected image_id with actual image_id
+            # There is an issue is that comparing both geojson files will fail due to unique image_id;
+            # to overcome that issue, overwrite expected image_id with actual image_id
             actual_image_id = actual_result["properties"]["image_id"]
             expected_result["properties"]["image_id"] = actual_image_id
 
@@ -44,7 +45,7 @@ class AppTestCase(unittest.TestCase):
 
         assert response.status_code == 200
 
-        sample_output = "test/sample_data/sample_center_point_model_output.geojson"
+        sample_output = "test/sample_data/sample_centerpoint_model_output.geojson"
         with open(sample_output, "r") as model_output_geojson:
             expected_json_result = json.loads(model_output_geojson.read())
 

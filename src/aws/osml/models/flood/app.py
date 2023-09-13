@@ -9,7 +9,7 @@ from typing import List
 
 from flask import Flask, Response, request
 
-from aws.osml.models.server_utils import detect_to_geojson_dict, load_image, setup_server
+from aws.osml.models.server_utils import detect_to_geojson, load_image, setup_server
 
 app = Flask(__name__)
 
@@ -40,7 +40,7 @@ def gen_flood_detects(flood_volume: int, height: int, width: int, bbox_percentag
             gen_x + fixed_object_size_xy[0],
             gen_y + fixed_object_size_xy[1],
         ]
-        detects.append(detect_to_geojson_dict(fixed_object_bbox))
+        detects.append(detect_to_geojson(fixed_object_bbox))
 
     return detects
 
@@ -50,7 +50,7 @@ def healthcheck() -> Response:
     """
     This is a health check that will always pass since this is a stub model.
 
-    :return: a successful status code (200) indicates all is well
+    :return: A successful status code (200) indicates all is well
     """
     app.logger.debug("Responding to health check")
     return Response(response="\n", status=200)
@@ -62,7 +62,7 @@ def predict() -> Response:
     This is the model invocation endpoint for the model container's REST
     API. The binary payload, in this case an image, is taken from the request
     parsed to ensure it is a valid image. This is a stub implementation that
-    will always return fixed set of detections for a valid input image.
+    will always return a fixed set of detections for a valid input image.
 
     :return: Response: Contains the GeoJSON results or an error status
     """

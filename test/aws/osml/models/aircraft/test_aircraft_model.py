@@ -6,7 +6,7 @@ import unittest
 
 
 class AppTestCase(unittest.TestCase):
-    os.environ["BBOX_PERCENTAGE"] = "0.1"
+    os.environ["ENABLE_SEGMENTATION"] = "True"
 
     def setUp(self):
         from aws.osml.models.aircraft import app
