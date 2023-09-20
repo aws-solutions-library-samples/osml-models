@@ -2,6 +2,7 @@
 
 import os
 from json import dumps
+from secrets import token_hex
 from typing import List
 
 import cv2
@@ -88,7 +89,7 @@ def predict() -> Response:
         detects: List[dict] = []
 
         # path to tmp file
-        tmp_file = "tmp.tif"
+        tmp_file = f"tmp-{token_hex(16)}.tif"
 
         # convert the GDAL dataset into a temporary file
         gdal.Translate(tmp_file, ds)
@@ -124,6 +125,9 @@ def predict() -> Response:
 
         # generate a plane detection from a D2 pretrained model
         json_results["features"].extend(detects)
+
+        # clean up tmp file
+        os.remove(tmp_file)
 
         app.logger.debug("Sending success response to requester.")
         # send back the detections
