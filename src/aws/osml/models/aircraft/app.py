@@ -17,6 +17,9 @@ from aws.osml.models import detect_to_geojson, load_image, mask_to_polygon, setu
 
 ENABLE_SEGMENTATION = bool(os.environ.get("ENABLE_SEGMENTATION", False))
 
+# enable exceptions for GDAL
+gdal.UseExceptions()
+
 app = Flask(__name__)
 
 
@@ -32,7 +35,7 @@ def build_predictor() -> DefaultPredictor:
         cfg.MODEL.DEVICE = "cpu"
     # set the number of classes we expect
     cfg.MODEL.ROI_HEADS.NUM_CLASSES = 1
-    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.7
+    cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.9
     # add project-specific config used for training to remove warnings
     cfg.merge_from_file(model_zoo.get_config_file("COCO-InstanceSegmentation/mask_rcnn_R_50_FPN_3x.yaml"))
     # path to the model weights we trained
@@ -91,37 +94,45 @@ def predict() -> Response:
         # path to tmp file
         tmp_file = f"tmp-{token_hex(16)}.tif"
 
-        # convert the GDAL dataset into a temporary file
-        gdal.Translate(tmp_file, ds)
+        try:
+            # convert the GDAL dataset into a temporary file
+            gdal.Translate(tmp_file, ds)
+        except Exception as err:
+            app.logger.debug(err)
+            return Response(response=f"Unable to write file from GDAL ds! Error: {err}", status=400)
+        finally:
+            # If it failed to load return the failed Response
+            if not os.path.isfile(tmp_file):
+                return Response(response="Unable to write file from GDAL ds!", status=400)
 
-        if os.path.isfile(tmp_file):
-            # load it into cv2
-            im = cv2.imread(tmp_file)
+        # load it into cv2
+        im = cv2.imread(tmp_file, cv2.IMREAD_LOAD_GDAL)
 
-            # grab detections
-            instances = plane_predictor(im)["instances"]
+        # grab detections
+        instances = plane_predictor(im)["instances"]
 
-            # if we had detection instances then add them
-            if instances is not None:
-                app.logger.debug(f"Found {len(instances)} detections in image.")
+        # if we had detection instances then add them
+        if instances is not None:
+            app.logger.debug(f"Found {len(instances)} detections in image.")
 
-                # get the bboxes for this image
-                boxes = instances.pred_boxes.tensor.cpu().numpy().tolist()
+            # get the bounding boxes for this image
+            boxes = instances.pred_boxes.tensor.cpu().numpy().tolist()
 
-                # get the scores for this image
-                scores = instances.scores.cpu().numpy().tolist()
+            # get the scores for this image
+            scores = instances.scores.cpu().numpy().tolist()
 
-                if ENABLE_SEGMENTATION is True:
-                    # get the polygons for this image
-                    masks = instances.pred_masks.cpu().numpy()
+            if ENABLE_SEGMENTATION is True:
+                # get the polygons for this image
+                masks = instances.pred_masks.cpu().numpy()
+            else:
+                masks = None
+            # concert our bounding boxes to geojson FeatureCollections
+            for i in range(0, len(boxes)):
+                if masks is not None:
+                    app.logger.debug(f"Found {len(masks)} masks in image.")
+                    detects.append(detect_to_geojson(boxes[i], mask_to_polygon(masks[i]), scores[i], "airplane"))
                 else:
-                    masks = None
-                # concert our bboxes to geojson FeatureCollections
-                for i in range(0, len(boxes)):
-                    if masks is not None:
-                        detects.append(detect_to_geojson(boxes[i], mask_to_polygon(masks[i]), scores[i], "airplane"))
-                    else:
-                        detects.append(detect_to_geojson(boxes[i], None, scores[i], "airplane"))
+                    detects.append(detect_to_geojson(boxes[i], None, scores[i], "airplane"))
 
         # generate a plane detection from a D2 pretrained model
         json_results["features"].extend(detects)
