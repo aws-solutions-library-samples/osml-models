@@ -29,29 +29,6 @@ Clone `osml-models` package into your desktop
 git clone https://github.com/aws-solutions-library-samples/osml-models.git
 ```
 
-## Linting/Formatting
-
-This package uses a number of tools to enforce formatting, linting, and general best practices:
-
-- [black](https://github.com/psf/black)
-- [isort](https://github.com/PyCQA/isort) for formatting with a max line length of 100
-- [mypy](https://github.com/pre-commit/mirrors-mypy) to enforce static type checking
-- [flake8](https://github.com/PyCQA/flake8) to check pep8 compliance and logical errors in code
-- [autopep](https://github.com/pre-commit/mirrors-autopep8) to check pep8 compliance and logical errors in code
-- [eslint](https://github.com/pre-commit/mirrors-eslint) to check pep8 compliance and logical errors in code
-- [prettier](https://github.com/pre-commit/mirrors-prettier) to check pep8 compliance and logical errors in code
-- [pre-commit](https://github.com/pre-commit/pre-commit-hooks) to install and control linters in githooks
-
-```bash
-python3 -m pip install pre-commit
-pre-commit install
-```
-
-Additionally, you can perform linting on all the files in the package by running:
-```bash
-pre-commit run --all-files --show-diff-on-failure
-```
-
 
 ### Documentation
 
@@ -69,7 +46,7 @@ To build the container, it uses the default `Dockerfile` from the root of this r
 docker build . -t osml-models:latest
 ```
 
-**Note**: The `MODEL_SELECTION` environment variable can be used to pick the model to run. Currently, we support 3 different types of model and below are the appropriate naming convention:
+**Note**: The `MODEL_SELECTION` environment variable can be used to pick the model to run. Currently, we support 3 different types of a model and below are the appropriate naming convention:
 
 - centerpoint
 - flood
@@ -96,7 +73,8 @@ Executing above should return:
 
 ## Support & Feedback
 
-OversightML Models is maintained by AWS Solution Architects. It is not part of an AWS service and support is provided best-effort by the OversightML community.
+OversightML Models are maintained by AWS Solution Architects.
+It is not part of an AWS service and support is provided best-effort by the OversightML community.
 
 To post feedback, submit feature ideas, or report bugs, please use the [Issues](https://github.com/aws-solutions-library-samples/osml-models/issues) section of this GitHub repo.
 
