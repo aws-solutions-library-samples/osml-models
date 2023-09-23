@@ -3,7 +3,7 @@
 import argparse
 import logging
 from secrets import token_hex
-from typing import List, Optional, Union, Dict, Any
+from typing import List, Optional, Union, Dict, Any, Tuple
 
 import cv2
 import numpy as np
@@ -62,7 +62,7 @@ def configure_logging(verbose: bool = False) -> None:
     logging.basicConfig(level=logging_level, format="%(levelname)-8s : %(message)s")
 
 
-def load_image(request: Request) -> Union[gdal.Dataset, None]:
+def load_image(request: Request) -> Union[Tuple[gdal.Dataset, str], None]:
     """
     Use GDAL to open the image. The binary payload from the HTTP request is used to
     create an in-memory VFS for GDAL which is then opened to decode the image into
@@ -78,7 +78,7 @@ def load_image(request: Request) -> Union[gdal.Dataset, None]:
         if not ds:
             logging.debug("Unable to parse request payload using GDAL.")
             return None
-        return ds
+        return ds, temp_ds_name
     except Exception as err:
         logging.debug("There was an exception when trying to load image!")
         logging.debug(err)

@@ -8,6 +8,7 @@ from random import randrange
 from typing import List
 
 from flask import Flask, Response, request
+from osgeo import gdal
 
 from aws.osml.models.server_utils import detect_to_geojson, load_image, setup_server
 
@@ -67,10 +68,10 @@ def predict() -> Response:
     :return: Response: Contains the GeoJSON results or an error status
     """
     app.logger.debug("Invoking flood model endpoint!")
-
+    temp_ds_name = None
     try:
         # load the image to get its dimensions
-        ds = load_image(request)
+        ds, temp_ds_name = load_image(request)
 
         # if it failed to load return the failed Response
         if ds is None:
@@ -95,7 +96,10 @@ def predict() -> Response:
         return Response(response="Unable to process request.", status=500)
 
     finally:
-        del ds  # Cleans up the dataset
+        # cleans up the dataset
+        del ds
+        if temp_ds_name is not None:
+            gdal.Unlink(temp_ds_name)
 
 
 if __name__ == "__main__":  # pragma: no cover

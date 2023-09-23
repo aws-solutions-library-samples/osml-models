@@ -71,13 +71,17 @@ def predict() -> Response:
     :return: Response: Contains the GeoJSON results or an error status
     """
     app.logger.debug("Invoking model endpoint using the Detectron2 Aircraft Model!")
+    # path to tmp file
+    tmp_file = f"tmp-{token_hex(16)}.tif"
+    temp_ds_name = None
     try:
         # Load the image to get its dimensions
         app.logger.debug("Loading image request.")
-        ds = load_image(request)
+        ds, temp_ds_name = load_image(request)
 
         # If it failed to load return the failed Response
         if ds is None:
+            gdal.Unlink(temp_ds_name)
             return Response(response="Unable to parse image from request!", status=400)
 
         # Pull out the width and height from the dataset
@@ -90,9 +94,6 @@ def predict() -> Response:
 
         # set up a place holder array for our detections
         detects: List[dict] = []
-
-        # path to tmp file
-        tmp_file = f"tmp-{token_hex(16)}.tif"
 
         try:
             # convert the GDAL dataset into a temporary file
@@ -137,9 +138,6 @@ def predict() -> Response:
         # generate a plane detection from a D2 pretrained model
         json_results["features"].extend(detects)
 
-        # clean up tmp file
-        os.remove(tmp_file)
-
         app.logger.debug("Sending success response to requester.")
         # send back the detections
         return Response(response=dumps(json_results), status=200)
@@ -148,7 +146,12 @@ def predict() -> Response:
         app.logger.debug(err)
         return Response(response="Unable to process request!", status=500)
     finally:
+        # clean up the dataset
         del ds
+        if os.path.isfile(tmp_file):
+            os.remove(tmp_file)
+        if temp_ds_name is not None:
+            gdal.Unlink(temp_ds_name)
 
 
 # pragma: no cover
