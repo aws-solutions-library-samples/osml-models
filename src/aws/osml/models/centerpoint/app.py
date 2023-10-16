@@ -3,7 +3,7 @@
 import logging
 import os
 from json import dumps
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from flask import Flask, Response, request
 from matplotlib.patches import CirclePolygon

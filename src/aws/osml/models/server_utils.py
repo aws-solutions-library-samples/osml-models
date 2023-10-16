@@ -3,7 +3,7 @@
 import argparse
 import logging
 from secrets import token_hex
-from typing import List, Optional, Union, Dict, Any
+from typing import Any, Dict, List, Optional, Union
 
 import cv2
 import numpy as np
