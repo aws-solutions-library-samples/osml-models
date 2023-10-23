@@ -1,6 +1,7 @@
-name: osml_models
+name: osml_model
 channels:
   - conda-forge
 dependencies:
+  - conda-forge::python=3.10.12
   - conda-forge::gdal=3.7.2
   - conda-forge::proj=9.3.0

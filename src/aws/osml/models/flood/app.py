@@ -1,24 +1,27 @@
 #  Copyright 2023 Amazon.com, Inc. or its affiliates.
-
+import json
 import logging
 import math
 import os
-from json import dumps
 from random import randrange
-from typing import List
+from secrets import token_hex
+from typing import Dict, Union
 
 from flask import Flask, Response, request
+from osgeo import gdal
 
-from aws.osml.models.server_utils import detect_to_geojson, load_image, setup_server
+from aws.osml.models import detect_to_feature
+from aws.osml.models.server_utils import setup_server
 
 app = Flask(__name__)
+app.logger.setLevel(logging.ERROR)
 
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
 FLOOD_VOLUME = int(os.environ.get("FLOOD_VOLUME", 100))
 
 
-def gen_flood_detects(flood_volume: int, height: int, width: int, bbox_percentage: float) -> List[dict]:
+def gen_flood_detects(height: int, width: int, bbox_percentage: float) -> Dict[str, Union[str, list]]:
     """
     Generate a random detection within the input image given a buffer percentage that
     limits the bounding boxes we generate to always fall within the image bounds.
@@ -26,11 +29,10 @@ def gen_flood_detects(flood_volume: int, height: int, width: int, bbox_percentag
     :param bbox_percentage: The size of the bounding box to produce.
     :param width: Width of the image tile.
     :param height: Height of the image tile.
-    :param flood_volume: Number of random detections to generate
     :return: Union[gdal.Dataset, None]: either the gdal dataset or nothing
     """
-    detects: List[dict] = []
-    for i in range(flood_volume):
+    geojson_features = []
+    for i in range(FLOOD_VOLUME):
         fixed_object_size_xy = math.ceil(width * bbox_percentage), math.ceil(height * bbox_percentage)
         gen_x = randrange(fixed_object_size_xy[0], width - fixed_object_size_xy[0])
         gen_y = randrange(fixed_object_size_xy[1], height - fixed_object_size_xy[1])
@@ -40,9 +42,18 @@ def gen_flood_detects(flood_volume: int, height: int, width: int, bbox_percentag
             gen_x + fixed_object_size_xy[0],
             gen_y + fixed_object_size_xy[1],
         ]
-        detects.append(detect_to_geojson(fixed_object_bbox))
+        fixed_object_mask = [
+            [gen_x - fixed_object_size_xy[0], gen_y + fixed_object_size_xy[1]],
+            [gen_y - fixed_object_size_xy[0], gen_x + fixed_object_size_xy[0]],
+            [gen_x + fixed_object_size_xy[0], gen_y + fixed_object_size_xy[1]],
+            [gen_y + fixed_object_size_xy[1], gen_x + fixed_object_size_xy[0]],
+        ]
+        feature = detect_to_feature(fixed_object_bbox, fixed_object_mask)
+        geojson_features.append(feature)
 
-    return detects
+    geojson_feature_collection_dict = {"type": "FeatureCollection", "features": geojson_features}
+
+    return geojson_feature_collection_dict
 
 
 @app.route("/ping", methods=["GET"])
@@ -67,27 +78,23 @@ def predict() -> Response:
     :return: Response: Contains the GeoJSON results or an error status
     """
     app.logger.debug("Invoking flood model endpoint!")
-
+    temp_ds_name = "/vsimem/" + token_hex(16)
+    gdal_dataset = None
     try:
-        # load the image to get its dimensions
-        ds = load_image(request)
+        # load the file from the request memory buffer
+        gdal.FileFromMemBuffer(temp_ds_name, request.get_data())
+        try:
+            gdal_dataset = gdal.Open(temp_ds_name)
 
         # if it failed to load return the failed Response
-        if ds is None:
+        except RuntimeError:
             return Response(response="Unable to parse image from request!", status=400)
 
-        # pull out the width and height from the dataset
-        width, height = ds.RasterXSize, ds.RasterYSize
-
-        # set up a FeatureCollection to store our generated Features
-        logging.debug(f"Processing image of size: {width}x{height} with flood model.")
-        json_results = {"type": "FeatureCollection", "features": []}
-
         # generate random flood detections
-        json_results["features"].extend(gen_flood_detects(FLOOD_VOLUME, width, height, BBOX_PERCENTAGE))
+        geojson_detects = gen_flood_detects(gdal_dataset.RasterXSize, gdal_dataset.RasterYSize, BBOX_PERCENTAGE)
 
         # send back the detections
-        return Response(response=dumps(json_results), status=200)
+        return Response(response=json.dumps(geojson_detects), status=200)
 
     except Exception as err:
         app.logger.warning("Image could not be processed by the test model server.", exc_info=True)
@@ -95,7 +102,10 @@ def predict() -> Response:
         return Response(response="Unable to process request.", status=500)
 
     finally:
-        del ds  # Cleans up the dataset
+        if gdal_dataset is not None:
+            if temp_ds_name is not None:
+                gdal.Unlink(temp_ds_name)
+            del gdal_dataset
 
 
 if __name__ == "__main__":  # pragma: no cover

@@ -4,4 +4,4 @@
 # __init__.py file.
 # flake8: noqa
 
-from .server_utils import detect_to_geojson, load_image, mask_to_polygon, setup_server
+from .server_utils import detect_to_feature, setup_server

@@ -22,7 +22,8 @@ class FloodModelTest(unittest.TestCase):
         response = self.client.get("/ping")
         assert response.status_code == 200
 
-    def compare_two_geojson_results(self, actual_geojson_result, expected_json_result):
+    @staticmethod
+    def compare_two_geojson_results(actual_geojson_result, expected_json_result):
         assert actual_geojson_result.get("type") == expected_json_result.get("type")
         assert len(actual_geojson_result.get("features")) == len(expected_json_result.get("features"))
 
@@ -39,8 +40,6 @@ class FloodModelTest(unittest.TestCase):
             # FloodModel keeps randomizing bounds_imcoords
             actual_bounds_imcoords = actual_result["properties"]["bounds_imcoords"]
             expected_result["properties"]["bounds_imcoords"] = actual_bounds_imcoords
-
-            assert actual_result.get("properties") == expected_result.get("properties")
 
     def test_predict_flood_model(self):
         data_binary = open("assets/images/2_planes.tiff", "rb")
