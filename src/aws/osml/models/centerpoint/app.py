@@ -1,20 +1,26 @@
 #  Copyright 2023 Amazon.com, Inc. or its affiliates.
-
+import json
 import logging
 import os
-from json import dumps
-from typing import Any, Dict, List
+from secrets import token_hex
+from typing import Dict, List
 
 from flask import Flask, Response, request
 from matplotlib.patches import CirclePolygon
+from osgeo import gdal
 
-from aws.osml.models.server_utils import detect_to_geojson, load_image, setup_server
+from aws.osml.models.server_utils import detect_to_feature, setup_server
 
+# enable exceptions for GDAL
+gdal.UseExceptions()
+
+# set up our flask app
 app = Flask(__name__)
+app.logger.setLevel(logging.ERROR)
 
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
-ENABLE_SEGMENTATION = bool(os.environ.get("ENABLE_SEGMENTATION", False))
+ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", "False").lower() == "true"
 
 
 def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> List[float]:
@@ -35,7 +41,28 @@ def gen_center_bbox(width: int, height: int, bbox_percentage: float) -> List[flo
     ]
 
 
-def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -> Dict[str, Any]:
+def gen_center_polygon(width: int, height: int, bbox_percentage: float) -> List[List[float]]:
+    center = 0, 0
+    center_xy = width / 2, height / 2
+    radius = bbox_percentage
+    # 20 is a nice circle, 3 is a triangle, etc
+    number_of_vertices = 6
+    circle = CirclePolygon(center, radius, resolution=number_of_vertices)
+    poly_path = circle.get_path().vertices.tolist()
+    # This is part of CV model requirements, to have (only) closed polygons
+    poly_path.append(poly_path[0])
+    # This moves poly to nonzero 0-1 coords
+    nonzero_circle = [((x + 1) / 2, (y + 1) / 2) for (x, y) in poly_path]
+    # Project to the correct percentage of our image coordinates
+    poly_scale = [bbox_percentage * width, bbox_percentage * height]
+    # Do final scaling of coordinates, and w/h translation to ensure within bounds of the bbox
+    center_polygon = [
+        [round(x * poly_scale[0] + center_xy[0], 4), round(y * poly_scale[1] + center_xy[1], 4)] for (x, y) in nonzero_circle
+    ]
+    return center_polygon
+
+
+def gen_center_detect(width: int, height: int, bbox_percentage: float) -> Dict:
     """
     Create  circular polygon that is at the center of and sized proportionally to the bbox
     :param bbox_percentage: the size of the bounding box and poly, relative to the image, to return
@@ -48,26 +75,12 @@ def gen_center_polygon_detect(width: int, height: int, bbox_percentage: float) -
      OSML segmentation 'passthrough'
 
     """
-    center = 0, 0
-    center_xy = width / 2, height / 2
-    fixed_object_bbox = gen_center_bbox(width, height, bbox_percentage)
-    radius = bbox_percentage
-    # 20 is a nice circle, 3 is a triangle, etc
-    number_of_vertices = 6
-    circle = CirclePolygon(center, radius, resolution=number_of_vertices)
-    poly_path = circle.get_path().vertices.tolist()
-    # this is part of CV model requirements, to have (only) closed polygons
-    poly_path.append(poly_path[0])
-    # this moves poly to nonzero 0-1 coords
-    nonzero_circle = [((x + 1) / 2, (y + 1) / 2) for (x, y) in poly_path]
-    # let's project to the correct percentage of our image coordinates
-    poly_scale = [bbox_percentage * width, bbox_percentage * height]
-    # and do final scaling of coordinates, and w/h translation to ensure within bounds of the bbox
-    center_polygon = [
-        (round(x * poly_scale[0] + center_xy[0], 4), round(y * poly_scale[1] + center_xy[1], 4)) for (x, y) in nonzero_circle
-    ]
+    center_polygon = None
+    if ENABLE_SEGMENTATION:
+        center_polygon = gen_center_polygon(width, height, bbox_percentage)
 
-    return detect_to_geojson(fixed_object_bbox, center_polygon)
+    geojson_feature = detect_to_feature(gen_center_bbox(width, height, bbox_percentage), center_polygon)
+    return {"type": "FeatureCollection", "features": [geojson_feature]}
 
 
 @app.route("/ping", methods=["GET"])
@@ -92,38 +105,30 @@ def predict() -> Response:
     :return: Response: Contains the GeoJSON results or an error status
     """
     app.logger.debug("Invoking centerpoint model endpoint")
-
+    temp_ds_name = "/vsimem/" + token_hex(16)
+    gdal_dataset = None
     try:
-        # load the image to get its dimensions
-        ds = load_image(request)
-
-        # sf it failed to load return the failed Response
-        if ds is None:
+        # Load the file from the request memory buffer
+        gdal.FileFromMemBuffer(temp_ds_name, request.get_data())
+        try:
+            gdal_dataset = gdal.Open(temp_ds_name)
+        # If it failed to load return the failed Response
+        except RuntimeError:
             return Response(response="Unable to parse image from request!", status=400)
 
-        # pull out the width and height from the dataset
-        width, height = ds.RasterXSize, ds.RasterYSize
-
-        # set up a FeatureCollection to store our generated Features
-        logging.debug(f"Processing image of size: {width}x{height} with flood model.")
-        json_results = {"type": "FeatureCollection", "features": []}
-
-        if ENABLE_SEGMENTATION is True:
-            json_results["features"].append(gen_center_polygon_detect(width, height, BBOX_PERCENTAGE))
-        else:
-            json_results["features"].append(detect_to_geojson(gen_center_bbox(width, height, BBOX_PERCENTAGE)))
-
-        # send back the detections
-        return Response(response=dumps(json_results), status=200)
-
+        geojson_feature_collection = gen_center_detect(gdal_dataset.RasterXSize, gdal_dataset.RasterYSize, BBOX_PERCENTAGE)
+        app.logger.debug(json.dumps(geojson_feature_collection))
+        # Send back the detections
+        return Response(response=json.dumps(geojson_feature_collection), status=200)
     except Exception as err:
         app.logger.warning("Image could not be processed by the centerpoint model server.", exc_info=True)
         app.logger.warning(err)
         return Response(response="Unable to process request.", status=500)
-
     finally:
-        # cleans up the dataset
-        del ds
+        if gdal_dataset is not None:
+            if temp_ds_name is not None:
+                gdal.Unlink(temp_ds_name)
+            del gdal_dataset
 
 
 # pragma: no cover

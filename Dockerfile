@@ -1,140 +1,114 @@
-FROM public.ecr.aws/amazonlinux/amazonlinux:2023 as osml_model
+# Use NVIDIA's CUDA base image
+FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04 as osml_model
 
-# set default cert information for pip only override
-# if you're using a mirror with a cert pulled in using cert-base as a build parameter
-ARG BUILD_CERT=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-ARG PIP_INSTALL_LOCATION=https://pypi.org/simple/
+# Set AWS to the maintainer
+LABEL maintainer="Amazon Web Services"
 
-# give sudo permissions
+# Enable sudo access for the build session
 USER root
 
-# set working directory to home
-WORKDIR /home/
+# Update package manager and install core build deps
+RUN apt-get update -y \
+    && apt-get upgrade -y \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing --no-install-recommends \
+            software-properties-common build-essential ca-certificates \
+            git make cmake wget unzip libtool automake \
+            zlib1g-dev libsqlite3-dev pkg-config sqlite3 libcurl4-gnutls-dev \
+            libtiff5-dev
 
-# install compilers and C/C++ tools building detectron2
-RUN yum groupinstall -y "Development Tools";
-
-# install req yum packages
-RUN yum install -y wget git shadow-utils
-
-# install miniconda
+# Install miniconda to manage our venv
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
+ENV CONDA_TARGET_ENV=osml_model
 RUN wget -c ${MINICONDA_URL} \
     && chmod +x ${MINICONDA_VERSION}.sh \
     && ./${MINICONDA_VERSION}.sh -b -f -p /opt/conda \
     && rm ${MINICONDA_VERSION}.sh \
     && ln -s /opt/conda/etc/profile.d/conda.sh /etc/profile.d/conda.sh
 
-# add conda and local installs to the path so we can execute them
-ENV PATH=/opt/conda/bin:/usr/local/:/usr/local/bin:${PATH}
+# Set our new conda target lib dirs
+ENV PATH=$PATH:/opt/conda/bin
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/lib/
+ENV PROJ_LIB=$PROJ_LIB:/opt/conda/share/proj
 
-# update the LD_LIBRARY_PATH to ensure the C++ libraries can be found
-ENV LD_LIBRARY_PATH=/usr/local/lib/:/usr/local/bin:/usr/include:/usr/local/:${LD_LIBRARY_PATH}
+# Copy our conda env which includes Python 3.10, GDAL, and PROJ
+COPY environment-py310.yml environment.yml
 
-# disable NNPACK since we don't do training with this container
-ENV USE_NNPACK=0
-
-# set local project directroy
-ENV PROJ_LIB=/usr/local/share/proj
-
-# copy our conda env configuration for Python 3.10
-COPY environment-py311.yml environment.yml
-
-# create the conda env
+# Create the conda env
 RUN conda env create
 
-# create /entry.sh which will be our new shell entry point
-# this performs actions to configure the environment
-# before starting a new shell (which inherits the env).
-# the exec is important as this allows signals to passpw
-ENV CONDA_TARGET_ENV=osml_models
+# Create /entry.sh which will be our new shell entry point
+# that performs actions to configure the environment on each RUN
 RUN     (echo '#!/bin/bash' \
     &&   echo '__conda_setup="$(/opt/conda/bin/conda shell.bash hook 2> /dev/null)"' \
     &&   echo 'eval "$__conda_setup"' \
     &&   echo 'conda activate "${CONDA_TARGET_ENV:-base}"' \
-    &&   echo '>&2 echo "ENTRYPOINT: CONDA_DEFAULT_ENV=${CONDA_DEFAULT_ENV}"' \
     &&   echo 'exec "$@"'\
         ) >> /entry.sh && chmod +x /entry.sh
 
-# tell the docker build process to use this for RUN.
-# the default shell on Linux is ["/bin/sh", "-c"], and on Windows is ["cmd", "/S", "/C"]
+# Tell the docker build process to use this for RUN
+# The default shell on Linux is ["/bin/sh", "-c"], and on Windows is ["cmd", "/S", "/C"]
 SHELL ["/entry.sh", "/bin/bash", "-c"]
 
-# configure .bashrc to drop into a conda env and immediately activate our TARGET env
+# Configure .bashrc to drop into a conda env and immediately activate our TARGET env
+# Note this makes python3 default to our conda managed python version
 RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
 
-# install CUDA drivers in the container
-RUN conda install -q -y --channel "nvidia/label/cuda-11.7.0" cuda
+# Install detectron2 dependencies
+RUN python3 -m pip install \
+    "fvcore>=0.1.5,<0.1.6" \
+    iopath==0.1.8 \
+    pycocotools \
+    omegaconf==2.1.1 \
+    hydra-core==1.1.1 \
+    black==21.4b2 \
+    termcolor==1.1.0 \
+    matplotlib==3.5.2 \
+    yacs==0.1.8 \
+    tabulate==0.8.9 \
+    cloudpickle==2.0.0 \
+    tqdm==4.62.3 \
+    tensorboard==2.8.0 \
+    opencv-contrib-python-headless==4.8.0.76
 
-# force cuda drivers to install since it won't be available in Docker build env
+# Torch needs special GPU enabled versions
+RUN python3 -m pip install \
+    torch==1.12.0+cu116 \
+    torchvision==0.13.0+cu116 \
+    -f https://download.pytorch.org/whl/torch_stable.html
+
+# Install detectron2 from source
 ENV FORCE_CUDA="1"
-# build only for Volta architecture - V100 chips (ml.p3 AWS instances that OSML uses)
-ENV TORCH_CUDA_ARCH_LIST="Volta"
-# set a fixed model cache directory - Detectron2 requirement
-ENV FVCORE_CACHE="/tmp"
+ARG TORCH_CUDA_ARCH_LIST="Pascal;Volta;Turing"
+ENV TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
+RUN python3 -m pip install --no-deps 'git+https://github.com/facebookresearch/detectron2.git'
 
-# install torch deps
-RUN python3 -m pip install \
-           --index-url ${PIP_INSTALL_LOCATION} \
-           --cert ${BUILD_CERT} \
-           --upgrade \
-           --force-reinstall \
-           torch==2.0.1 torchvision==0.15.2 cython==3.0.0 opencv-contrib-python-headless==4.8.0.76;
+# Cleanup to reduce the image size
+RUN apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
+    conda clean -afy && \
+    python -m pip cache purge
 
-# isntall CoCo deps
-RUN python3 -m pip install \
-            --index-url ${PIP_INSTALL_LOCATION} \
-            --cert ${BUILD_CERT} \
-             'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI';
+# Copy model source and install it
+RUN mkdir /home/osml-models
+COPY . /home/osml-models
 
-# install detectron2 req libraries from facebook
-RUN python3 -m pip install \
-            --index-url ${PIP_INSTALL_LOCATION} \
-            --cert ${BUILD_CERT} \
-            'git+https://github.com/facebookresearch/fvcore';
-
-# set CUDA home dir
-ENV CUDA_HOME=${CONDA_PREFIX}
-
-# install detectron2
-RUN python3 -m pip install \
-            --index-url ${PIP_INSTALL_LOCATION} \
-            --cert ${BUILD_CERT} \
-            'git+https://github.com/facebookresearch/detectron2.git';
-
-# copy application source in to container
-
-COPY . .
+# Install Detectron2
+WORKDIR  /home/osml-models
 RUN chmod 777 --recursive .
+RUN python3 -m pip install .
 
-# hop in the home directory where we have copied the source files
-RUN python3 -m pip install \
-    --index-url ${PIP_INSTALL_LOCATION} \
-    --cert ${BUILD_CERT} \
-    .
-
-# clean up any dangling conda resources
-RUN conda clean -afy
-
-# this is a hotfix until the most recent detectron2 udpates reach conda-forge
-# https://github.com/facebookresearch/detectron2/commit/ff53992b1985b63bd3262b5a36167098e3dada02
-RUN sed -i "s|Image.LINEAR|Image.BILINEAR |g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/detectron2/data/transforms/transform.py
-
-# this is a hotfix until facebookresearch fixes their telemetry logging package
-# https://github.com/facebookresearch/iopath/issues/21
-RUN sed -i "s|handler.log_event()|pass|g" /opt/conda/envs/osml_models/lib/python3.11/site-packages/iopath/common/file_io.py
-
-# make sure we expose our ports
+# Make sure we expose our ports
 EXPOSE 8080
 
-# set up a health check at that port
+# Set up a health check at that port
 HEALTHCHECK NONE
 
-# set up a user to run the container as and assume it
-RUN adduser model
+RUN python3 -m pip install opencv-contrib-python-headless==4.8.0.76
+# Set up a user to run the container as and assume it
+RUN adduser --system --no-create-home --group model
 RUN chown -R model:model ./
 USER model
 
-# set the entry point script
-ENTRYPOINT ["/entry.sh", "/bin/bash", "-c", "python3 -m aws.osml.models.${MODEL_SELECTION}.app"]
+# Set the entry point script
+ENTRYPOINT python3 src/aws/osml/models/$MODEL_SELECTION/app.py
