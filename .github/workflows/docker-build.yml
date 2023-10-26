@@ -1,21 +1,23 @@
-name: Docker Build
+name: Build Docker Container
 
 on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_call:
 
 jobs:
-
   build:
-
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v3
+    - name: Free up the build space
+      uses: easimon/maximize-build-space@master
+      with:
+        root-reserve-mb: 40000
+        swap-size-mb: 1024
+        remove-dotnet: 'true'
+        remove-android: 'true'
+        remove-codeql: 'true'
+        remove-haskell: 'true'
+    - uses: actions/checkout@v4
       with:
         lfs: 'true'
-        ssh-key: ${{ secrets.git_ssh_key }}
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag osml-models:$(date +%s)

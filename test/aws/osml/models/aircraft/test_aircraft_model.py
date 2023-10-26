@@ -37,7 +37,6 @@ class AppTestCase(unittest.TestCase):
         response = self.client.post("/invocations", data=data_binary)
 
         assert response.status_code == 200
-
         actual_geojson_result = json.loads(response.data)
 
         with open("test/sample_data/sample_aircraft_model_output.geojson", "r") as model_output_geojson:
