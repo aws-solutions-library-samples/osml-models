@@ -93,34 +93,36 @@ def instances_to_feature_collection(
     :return: FeatureCollection object containing detections
     """
     geojson_feature_collection_dict = {"type": "FeatureCollection", "features": []}
+    if instances:
+        # Get the bounding boxes for this image
+        bboxes = instances.pred_boxes.tensor.cpu().numpy().tolist()
 
-    # Get the bounding boxes for this image
-    bboxes = instances.pred_boxes.tensor.cpu().numpy().tolist()
+        # Get the scores for this image
+        scores = instances.scores.cpu().numpy().tolist()
 
-    # Get the scores for this image
-    scores = instances.scores.cpu().numpy().tolist()
+        masks = None
+        if ENABLE_SEGMENTATION:
+            # Get the polygons for this image
+            masks = instances.pred_masks.cpu()
 
-    masks = None
-    if ENABLE_SEGMENTATION:
-        # Get the polygons for this image
-        masks = instances.pred_masks.cpu()
-
-    for i in range(0, len(bboxes)):
-        feature = {
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
-            "id": str(uuid.uuid4()),
-            "properties": {
-                "bounds_imcoords": bboxes[i],
-                "detection_score": float(scores[i]),
-                "feature_types": {"aircraft": float(scores[i])},
-                "image_id": image_id,
-            },
-        }
-        if masks is not None:
-            feature["properties"]["geom_imcoords"] = mask_to_polygon(masks[i])
-        app.logger.debug(feature)
-        geojson_feature_collection_dict["features"].append(feature)
+        for i in range(0, len(bboxes)):
+            feature = {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [0.0, 0.0]},
+                "id": str(uuid.uuid4()),
+                "properties": {
+                    "bounds_imcoords": bboxes[i],
+                    "detection_score": float(scores[i]),
+                    "feature_types": {"aircraft": float(scores[i])},
+                    "image_id": image_id,
+                },
+            }
+            if masks is not None:
+                feature["properties"]["geom_imcoords"] = mask_to_polygon(masks[i])
+            app.logger.debug(feature)
+            geojson_feature_collection_dict["features"].append(feature)
+    else:
+        app.logger.debug("No features found!")
 
     return geojson_feature_collection_dict
 
