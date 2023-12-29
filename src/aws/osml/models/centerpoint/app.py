@@ -54,10 +54,10 @@ def gen_center_polygon(width: int, height: int, bbox_percentage: float) -> List[
     # This moves poly to nonzero 0-1 coords
     nonzero_circle = [((x + 1) / 2, (y + 1) / 2) for (x, y) in poly_path]
     # Project to the correct percentage of our image coordinates
-    poly_scale = [bbox_percentage * width, bbox_percentage * height]
+    scale = [bbox_percentage * width, bbox_percentage * height]
     # Do final scaling of coordinates, and w/h translation to ensure within bounds of the bbox
     center_polygon = [
-        [round(x * poly_scale[0] + center_xy[0], 4), round(y * poly_scale[1] + center_xy[1], 4)] for (x, y) in nonzero_circle
+        [round(x * scale[0] + center_xy[0], 4), round(y * scale[1] + center_xy[1], 4)] for (x, y) in nonzero_circle
     ]
     return center_polygon
 
