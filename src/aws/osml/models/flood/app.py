@@ -19,7 +19,7 @@ app.logger.setLevel(logging.ERROR)
 
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
-FLOOD_VOLUME = int(os.environ.get("FLOOD_VOLUME", 500))
+FLOOD_VOLUME = int(os.environ.get("FLOOD_VOLUME", 100))
 ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", "False").lower() == "true"
 
 
