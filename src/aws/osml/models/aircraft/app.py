@@ -100,9 +100,11 @@ def instances_to_feature_collection(
         # Get the scores for this image
         scores = instances.scores.cpu().numpy().tolist()
 
+        # Default masks to None
         masks = None
+
+        # Get the polygon masks for this image if segmentation is enabled
         if ENABLE_SEGMENTATION:
-            # Get the polygons for this image
             masks = instances.pred_masks.cpu()
 
         for i in range(0, len(bboxes)):
@@ -149,17 +151,21 @@ def request_to_instances(req: Request) -> Union[Instances, None]:
         # Read GDAL dataset and convert to a numpy array
         image_array = gdal_dataset.ReadAsArray()
 
-        # Check if the image has an alpha channel (4 channels) and remove it if so
-        if image_array.shape[0] == 4:
+        # Handling of different image shapes
+        if image_array.ndim == 2:  # For grayscale images without a channel dimension
+            # Reshape to add a channel dimension and replicate across 3 channels for RGB
+            image_array = np.stack([image_array] * 3, axis=0)
+        elif image_array.shape[0] == 1:  # For grayscale images with a channel dimension
+            # Replicate the single channel across 3 channels for RGB
+            image_array = np.repeat(image_array, 3, axis=0)
+        elif image_array.shape[0] == 4:  # For images with an alpha channel
             # Remove the alpha channel
             image_array = image_array[:3, :, :]
 
-        # Ensure the image has 3 channels (e.g., RGB)
-        if image_array.shape[0] == 1:
-            image_array = np.repeat(image_array, 3, axis=0)
-
-        # Convert numpy array to uint8 format (required for Detectron2)
+        # Conversion to uint8 (ensure this is done after ensuring 3 channels)
         image_array = (image_array * 255).astype(np.uint8)
+
+        # Transpose the array from (channels, height, width) to (height, width, channels)
         image = np.transpose(image_array, (1, 2, 0))
 
         # grab detections from Detectron2
