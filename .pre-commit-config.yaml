@@ -52,6 +52,8 @@ repos:
     hooks:
       - id: copyright
         name: update copyright
+        args:
+          - --verbose
       - id: copyright-required
         name: require copyright
         exclude: |
