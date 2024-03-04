@@ -52,8 +52,19 @@ repos:
     hooks:
       - id: copyright
         name: update copyright
-        args:
-          - --verbose
+        exclude: |
+          (?x)^(
+            doc/.*|
+            ^\..+|
+            .+\.md|
+            test/sample_data/.*|
+            LICENSE|
+            tox.ini|
+            pyproject.toml|
+            setup.cfg|
+            setup.py|
+            py.typed
+          )$
       - id: copyright-required
         name: require copyright
         exclude: |
