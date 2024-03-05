@@ -1,4 +1,4 @@
-#  Copyright 2023 Amazon.com, Inc. or its affiliates.
+#  Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
 
 import json
 import os
@@ -32,8 +32,8 @@ class FloodModelTest(unittest.TestCase):
         ):
             assert actual_result.get("geometry") == expected_result.get("geometry")
 
-            # The Current issue is that comparing both geojson files will fail due to unique image_id
-            # To overcome that issue, overwrite expected image_id with actual image_id
+            # The Current issue is that comparing both geojson files will fail due to unique image_id.
+            # To overcome that issue, overwrite expected image_id with actual image_id.
             actual_image_id = actual_result["properties"]["image_id"]
             expected_result["properties"]["image_id"] = actual_image_id
 

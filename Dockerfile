@@ -1,3 +1,5 @@
+# Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
+
 # Use NVIDIA's CUDA base image
 FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04 as osml_model
 
