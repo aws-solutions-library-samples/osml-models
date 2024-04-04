@@ -1,0 +1,22 @@
+:py:mod:`models.aircraft`
+=========================
+
+.. py:module:: models.aircraft
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   app/index.rst
+
+
+Package Contents
+----------------
+
+.. py:data:: app
+
+   
+

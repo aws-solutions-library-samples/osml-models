@@ -1,0 +1,7 @@
+aws.osml.models.aircraft.app module
+===================================
+
+.. automodule:: aws.osml.models.aircraft.app
+   :members:
+   :undoc-members:
+   :show-inheritance:
