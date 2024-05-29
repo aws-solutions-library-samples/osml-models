@@ -71,7 +71,8 @@ RUN python3 -m pip install \
     cloudpickle==2.0.0 \
     tqdm==4.62.3 \
     tensorboard==2.8.0 \
-    opencv-contrib-python-headless==4.8.0.76
+    opencv-contrib-python-headless==4.8.0.76 \
+    setuptools==69.5.1
 
 # Torch needs special GPU enabled versions
 RUN python3 -m pip install \
