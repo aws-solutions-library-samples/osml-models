@@ -1,7 +1,7 @@
 # Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
 
 # Use NVIDIA's CUDA base image
-FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04 as osml_model
+FROM nvidia/cuda:11.6.2-cudnn8-devel-ubuntu18.04 as build-env
 
 # Set AWS to the maintainer
 LABEL maintainer="Amazon Web Services"
@@ -9,7 +9,7 @@ LABEL maintainer="Amazon Web Services"
 # Enable sudo access for the build session
 USER root
 
-# Update package manager and install core build deps
+# Update and install core build dependencies
 RUN apt-get update -y \
     && apt-get upgrade -y \
     && DEBIAN_FRONTEND=noninteractive apt-get install -y --fix-missing --no-install-recommends \
@@ -18,7 +18,7 @@ RUN apt-get update -y \
             zlib1g-dev libsqlite3-dev pkg-config sqlite3 libcurl4-gnutls-dev \
             libtiff5-dev
 
-# Install miniconda to manage our venv
+# Install Miniconda
 ARG MINICONDA_VERSION=Miniconda3-latest-Linux-x86_64
 ARG MINICONDA_URL=https://repo.anaconda.com/miniconda/${MINICONDA_VERSION}.sh
 ENV CONDA_TARGET_ENV=osml_model
@@ -33,31 +33,18 @@ ENV PATH=$PATH:/opt/conda/bin
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/lib/
 ENV PROJ_LIB=$PROJ_LIB:/opt/conda/share/proj
 
-# Copy our conda env which includes Python 3.10, GDAL, and PROJ
+# Copy the conda environment file and create the environment
 COPY environment-py310.yml environment.yml
+RUN conda env create -n ${CONDA_TARGET_ENV} --file environment.yml && \
+    conda clean -afy && \
+    find /opt/conda/ -follow -type f -name '*.a' -delete && \
+    find /opt/conda/ -follow -type f -name '*.pyc' -delete && \
+    find /opt/conda/ -follow -type f -name '*.js.map' -delete && \
+    rm -rf /opt/conda/pkgs
 
-# Create the conda env
-RUN conda env create
-
-# Create /entry.sh which will be our new shell entry point
-# that performs actions to configure the environment on each RUN
-RUN     (echo '#!/bin/bash' \
-    &&   echo '__conda_setup="$(/opt/conda/bin/conda shell.bash hook 2> /dev/null)"' \
-    &&   echo 'eval "$__conda_setup"' \
-    &&   echo 'conda activate "${CONDA_TARGET_ENV:-base}"' \
-    &&   echo 'exec "$@"'\
-        ) >> /entry.sh && chmod +x /entry.sh
-
-# Tell the docker build process to use this for RUN
-# The default shell on Linux is ["/bin/sh", "-c"], and on Windows is ["cmd", "/S", "/C"]
-SHELL ["/entry.sh", "/bin/bash", "-c"]
-
-# Configure .bashrc to drop into a conda env and immediately activate our TARGET env
-# Note this makes python3 default to our conda managed python version
-RUN conda init && echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >>  ~/.bashrc
-
-# Install detectron2 dependencies
-RUN python3 -m pip install \
+# Activate the conda environment and install Python dependencies
+RUN . /opt/conda/etc/profile.d/conda.sh && conda activate ${CONDA_TARGET_ENV} && \
+    python3 -m pip install --no-cache-dir \
     "fvcore>=0.1.5,<0.1.6" \
     iopath==0.1.8 \
     pycocotools \
@@ -74,44 +61,64 @@ RUN python3 -m pip install \
     opencv-contrib-python-headless==4.8.0.76 \
     setuptools==69.5.1
 
-# Torch needs special GPU enabled versions
-RUN python3 -m pip install \
+# Install Torch with GPU support
+RUN . /opt/conda/etc/profile.d/conda.sh && conda activate ${CONDA_TARGET_ENV} && \
+    python3 -m pip install --no-cache-dir \
     torch==1.12.0+cu116 \
     torchvision==0.13.0+cu116 \
     -f https://download.pytorch.org/whl/torch_stable.html
 
-# Install detectron2 from source
+# Install Detectron2
 ENV FORCE_CUDA="1"
 ARG TORCH_CUDA_ARCH_LIST="Pascal;Volta;Turing"
 ENV TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
-RUN python3 -m pip install --no-deps 'git+https://github.com/facebookresearch/detectron2.git'
+RUN . /opt/conda/etc/profile.d/conda.sh && conda activate ${CONDA_TARGET_ENV} && \
+    python3 -m pip install --no-cache-dir --no-deps 'git+https://github.com/facebookresearch/detectron2.git'
 
-# Cleanup to reduce the image size
+# Clean up unnecessary files
 RUN apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* && \
     conda clean -afy && \
     python -m pip cache purge
 
+# Stage 2: Build the final image
+FROM nvidia/cuda:11.6.2-cudnn8-runtime-ubuntu18.04 as osml_model
+
+LABEL maintainer="Amazon Web Services"
+USER root
+
+# Copy only the necessary files from the build environment
+COPY --from=build-env /opt/conda /opt/conda
+
+# Set environment variables
+ENV CONDA_TARGET_ENV="osml_model"
+ENV PATH=$PATH:/opt/conda/bin
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/lib/
+ENV PROJ_LIB=$PROJ_LIB:/opt/conda/share/proj
+
+# Set up the conda environment
+SHELL ["/opt/conda/bin/conda", "run", "-n", "osml_model", "/bin/bash", "-c"]
+RUN echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >> ~/.bashrc
+
 # Copy model source and install it
 RUN mkdir /home/osml-models
 COPY . /home/osml-models
 
-# Install Detectron2
-WORKDIR  /home/osml-models
+# Install the application dependencies
+WORKDIR /home/osml-models
 RUN chmod 777 --recursive .
-RUN python3 -m pip install .
+RUN python3 -m pip install --no-cache-dir .
 
-# Make sure we expose our ports
+# Expose the necessary ports
 EXPOSE 8080
 
-# Set up a health check at that port
+# Disable health check
 HEALTHCHECK NONE
 
-RUN python3 -m pip install opencv-contrib-python-headless==4.8.0.76
-# Set up a user to run the container as and assume it
+# Set up a user to run the container
 RUN adduser --system --no-create-home --group model
 RUN chown -R model:model ./
 USER model
 
-# Set the entry point script
+# Set the entry point
 ENTRYPOINT python3 src/aws/osml/models/$MODEL_SELECTION/app.py
