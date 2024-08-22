@@ -1,0 +1,91 @@
+models.aircraft.app
+===================
+
+.. py:module:: models.aircraft.app
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   models.aircraft.app.ENABLE_SEGMENTATION
+   models.aircraft.app.app
+   models.aircraft.app.aircraft_predictor
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   models.aircraft.app.build_predictor
+   models.aircraft.app.mask_to_polygon
+   models.aircraft.app.instances_to_feature_collection
+   models.aircraft.app.request_to_instances
+   models.aircraft.app.healthcheck
+   models.aircraft.app.predict
+
+
+Module Contents
+---------------
+
+.. py:data:: ENABLE_SEGMENTATION
+
+.. py:data:: app
+
+.. py:function:: build_predictor() -> detectron2.engine.DefaultPredictor
+
+   Create a single detection predictor to detect aircraft
+   :return: DefaultPredictor
+
+
+.. py:function:: mask_to_polygon(mask: torch.Tensor) -> List[List[float]]
+
+   Convert a detectron2 instance mask in the form of a Tensor to a list-form polygon representing the mask.
+
+   :param mask: A detectron2 instance mask in the form of a Tensor
+   :return: A list form polygon representing the mask
+
+
+.. py:function:: instances_to_feature_collection(instances: detectron2.structures.instances.Instances, image_id: Optional[str] = str(uuid.uuid4())) -> Dict[str, Union[str, list]]
+
+   Convert the gRPC response from the GetDetection call into a GeoJSON output.
+   Each detection is a feature in the collection, including image coordinates,
+   score, and type identifier as feature properties.
+
+   :param instances: Detectron2 result instances
+   :param image_id: Identifier for the processed image (optional)
+   :return: FeatureCollection object containing detections
+
+
+.. py:function:: request_to_instances(req: flask.Request) -> Union[detectron2.structures.instances.Instances, None]
+
+   Use GDAL to open the image. The binary payload from the HTTP request is used to
+   create an in-memory VFS for GDAL which is then opened to decode the image into
+   a dataset which will give us access to a NumPy array for the pixels. Then
+   use that image to create detectron2 detection instances.
+
+   :param req: Request: the flask request object passed into the SM endpoint
+   :return: Either a set of detectron2 detection instances or nothing
+
+
+.. py:data:: aircraft_predictor
+
+.. py:function:: healthcheck() -> flask.Response
+
+   This is a health check that will always pass since this is a stub model.
+
+   :return: Successful status code (200) indicates all is well
+
+
+.. py:function:: predict() -> flask.Response
+
+   This is the model invocation endpoint for the model container's REST
+   API. The binary payload, in this case an image, is taken from the request
+   parsed to ensure it is a valid image. This is a stub implementation that
+   will always return a fixed set of detections for a valid input image.
+
+   :return: Response: Contains the GeoJSON results or an error status
+
+

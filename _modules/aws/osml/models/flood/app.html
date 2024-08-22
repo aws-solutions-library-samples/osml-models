@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../../../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>aws.osml.models.flood.app &mdash; OversightML Model Runner  documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../../../../../_static/graphviz.css?v=fd3f3429" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../../../../../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../../../../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../../../../../_static/documentation_options.js?v=5929fcd5"></script>
+        <script src="../../../../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../../../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../../../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../../../../index.html" class="icon icon-home">
+            OversightML Model Runner
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../../index.html">OversightML Model Runner</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../../../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../../../../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">aws.osml.models.flood.app</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for aws.osml.models.flood.app</h1><div class="highlight"><pre>
+<span></span><span class="c1">#  Copyright 2023-2024 Amazon.com, Inc. or its affiliates.</span>
+
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">math</span>
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">random</span>
+<span class="kn">from</span> <span class="nn">random</span> <span class="kn">import</span> <span class="n">randrange</span>
+<span class="kn">from</span> <span class="nn">secrets</span> <span class="kn">import</span> <span class="n">token_hex</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span> <span class="nn">flask</span> <span class="kn">import</span> <span class="n">Flask</span><span class="p">,</span> <span class="n">Response</span><span class="p">,</span> <span class="n">request</span>
+<span class="kn">from</span> <span class="nn">osgeo</span> <span class="kn">import</span> <span class="n">gdal</span>
+
+<span class="kn">from</span> <span class="nn">aws.osml.models</span> <span class="kn">import</span> <span class="n">detect_to_feature</span>
+<span class="kn">from</span> <span class="nn">aws.osml.models.server_utils</span> <span class="kn">import</span> <span class="n">setup_server</span>
+
+<span class="n">app</span> <span class="o">=</span> <span class="n">Flask</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+<span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">ERROR</span><span class="p">)</span>
+
+<span class="c1"># Optional ENV configurations</span>
+<span class="n">BBOX_PERCENTAGE</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;BBOX_PERCENTAGE&quot;</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">))</span>
+<span class="n">FLOOD_VOLUME</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;FLOOD_VOLUME&quot;</span><span class="p">,</span> <span class="mi">100</span><span class="p">))</span>
+<span class="n">ENABLE_SEGMENTATION</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;ENABLE_SEGMENTATION&quot;</span><span class="p">,</span> <span class="s2">&quot;False&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;true&quot;</span>
+
+
+<div class="viewcode-block" id="gen_flood_detects">
+<a class="viewcode-back" href="../../../../../_apidoc/aws.osml.models.flood.app.html#aws.osml.models.flood.app.gen_flood_detects">[docs]</a>
+<span class="k">def</span> <span class="nf">gen_flood_detects</span><span class="p">(</span><span class="n">height</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">width</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">bbox_percentage</span><span class="p">:</span> <span class="nb">float</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">]]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generate a random detection within the input image given a buffer percentage that</span>
+<span class="sd">    limits the bounding boxes we generate to always fall within the image bounds.</span>
+
+<span class="sd">    :param bbox_percentage: The size of the bounding box to produce.</span>
+<span class="sd">    :param width: Width of the image tile.</span>
+<span class="sd">    :param height: Height of the image tile.</span>
+<span class="sd">    :return: Union[gdal.Dataset, None]: either the gdal dataset or nothing</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">geojson_features</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">FLOOD_VOLUME</span><span class="p">):</span>
+        <span class="n">fixed_object_size_xy</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">width</span> <span class="o">*</span> <span class="n">bbox_percentage</span><span class="p">),</span> <span class="n">math</span><span class="o">.</span><span class="n">ceil</span><span class="p">(</span><span class="n">height</span> <span class="o">*</span> <span class="n">bbox_percentage</span><span class="p">)</span>
+        <span class="n">gen_x</span> <span class="o">=</span> <span class="n">randrange</span><span class="p">(</span><span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">width</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">gen_y</span> <span class="o">=</span> <span class="n">randrange</span><span class="p">(</span><span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">height</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="n">fixed_object_bbox</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">gen_x</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">gen_y</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="n">gen_x</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="n">gen_y</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+        <span class="p">]</span>
+        <span class="n">fixed_object_mask</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">ENABLE_SEGMENTATION</span><span class="p">:</span>
+            <span class="n">fixed_object_mask</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="p">[</span><span class="n">gen_x</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gen_y</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                <span class="p">[</span><span class="n">gen_y</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gen_x</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="p">[</span><span class="n">gen_x</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gen_y</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+                <span class="p">[</span><span class="n">gen_y</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">gen_x</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">]],</span>
+                <span class="p">[</span><span class="n">gen_x</span> <span class="o">-</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">gen_y</span> <span class="o">+</span> <span class="n">fixed_object_size_xy</span><span class="p">[</span><span class="mi">1</span><span class="p">]],</span>
+            <span class="p">]</span>
+        <span class="c1"># Create a feature with a random confidence score for each random detect</span>
+        <span class="n">feature</span> <span class="o">=</span> <span class="n">detect_to_feature</span><span class="p">(</span><span class="n">fixed_object_bbox</span><span class="p">,</span> <span class="n">fixed_object_mask</span><span class="p">,</span> <span class="n">random</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="n">geojson_features</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">feature</span><span class="p">)</span>
+
+    <span class="n">geojson_feature_collection_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;FeatureCollection&quot;</span><span class="p">,</span> <span class="s2">&quot;features&quot;</span><span class="p">:</span> <span class="n">geojson_features</span><span class="p">}</span>
+
+    <span class="k">return</span> <span class="n">geojson_feature_collection_dict</span></div>
+
+
+
+<div class="viewcode-block" id="healthcheck">
+<a class="viewcode-back" href="../../../../../_apidoc/aws.osml.models.flood.app.html#aws.osml.models.flood.app.healthcheck">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/ping&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;GET&quot;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">healthcheck</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is a health check that will always pass since this is a stub model.</span>
+
+<span class="sd">    :return: A successful status code (200) indicates all is well</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Responding to health check&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">response</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="predict">
+<a class="viewcode-back" href="../../../../../_apidoc/aws.osml.models.flood.app.html#aws.osml.models.flood.app.predict">[docs]</a>
+<span class="nd">@app</span><span class="o">.</span><span class="n">route</span><span class="p">(</span><span class="s2">&quot;/invocations&quot;</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;POST&quot;</span><span class="p">])</span>
+<span class="k">def</span> <span class="nf">predict</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Response</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This is the model invocation endpoint for the model container&#39;s REST</span>
+<span class="sd">    API. The binary payload, in this case an image, is taken from the request</span>
+<span class="sd">    parsed to ensure it is a valid image. This is a stub implementation that</span>
+<span class="sd">    will always return a fixed set of detections for a valid input image.</span>
+
+<span class="sd">    :return: Response: Contains the GeoJSON results or an error status</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Invoking flood model endpoint!&quot;</span><span class="p">)</span>
+    <span class="n">temp_ds_name</span> <span class="o">=</span> <span class="s2">&quot;/vsimem/&quot;</span> <span class="o">+</span> <span class="n">token_hex</span><span class="p">(</span><span class="mi">16</span><span class="p">)</span>
+    <span class="n">gdal_dataset</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="c1"># load the file from the request memory buffer</span>
+        <span class="n">gdal</span><span class="o">.</span><span class="n">FileFromMemBuffer</span><span class="p">(</span><span class="n">temp_ds_name</span><span class="p">,</span> <span class="n">request</span><span class="o">.</span><span class="n">get_data</span><span class="p">())</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">gdal_dataset</span> <span class="o">=</span> <span class="n">gdal</span><span class="o">.</span><span class="n">Open</span><span class="p">(</span><span class="n">temp_ds_name</span><span class="p">)</span>
+
+        <span class="c1"># if it failed to load return the failed Response</span>
+        <span class="k">except</span> <span class="ne">RuntimeError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">response</span><span class="o">=</span><span class="s2">&quot;Unable to parse image from request!&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">400</span><span class="p">)</span>
+
+        <span class="c1"># generate random flood detections</span>
+        <span class="n">geojson_detects</span> <span class="o">=</span> <span class="n">gen_flood_detects</span><span class="p">(</span><span class="n">gdal_dataset</span><span class="o">.</span><span class="n">RasterXSize</span><span class="p">,</span> <span class="n">gdal_dataset</span><span class="o">.</span><span class="n">RasterYSize</span><span class="p">,</span> <span class="n">BBOX_PERCENTAGE</span><span class="p">)</span>
+
+        <span class="c1"># send back the detections</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">response</span><span class="o">=</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">geojson_detects</span><span class="p">),</span> <span class="n">status</span><span class="o">=</span><span class="mi">200</span><span class="p">)</span>
+
+    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">err</span><span class="p">:</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Image could not be processed by the test model server.&quot;</span><span class="p">,</span> <span class="n">exc_info</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">app</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">Response</span><span class="p">(</span><span class="n">response</span><span class="o">=</span><span class="s2">&quot;Unable to process request.&quot;</span><span class="p">,</span> <span class="n">status</span><span class="o">=</span><span class="mi">500</span><span class="p">)</span>
+
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">gdal_dataset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">temp_ds_name</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">gdal</span><span class="o">.</span><span class="n">Unlink</span><span class="p">(</span><span class="n">temp_ds_name</span><span class="p">)</span>
+            <span class="k">del</span> <span class="n">gdal_dataset</span></div>
+
+
+
+<span class="k">if</span> <span class="vm">__name__</span> <span class="o">==</span> <span class="s2">&quot;__main__&quot;</span><span class="p">:</span>  <span class="c1"># pragma: no cover</span>
+    <span class="n">setup_server</span><span class="p">(</span><span class="n">app</span><span class="p">)</span>
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Amazon.com.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>  
+
+<style>
+    .wy-nav-content { max-width: none; }
+</style>
+
+
+
+</body>
+</html>

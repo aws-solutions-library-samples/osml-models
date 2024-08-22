@@ -1,0 +1,28 @@
+models.centerpoint
+==================
+
+.. py:module:: models.centerpoint
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/models/centerpoint/app/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   models.centerpoint.app
+
+
+Package Contents
+----------------
+
+.. py:data:: app
+

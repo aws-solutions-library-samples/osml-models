@@ -1,0 +1,66 @@
+models.flood.app
+================
+
+.. py:module:: models.flood.app
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   models.flood.app.app
+   models.flood.app.BBOX_PERCENTAGE
+   models.flood.app.FLOOD_VOLUME
+   models.flood.app.ENABLE_SEGMENTATION
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   models.flood.app.gen_flood_detects
+   models.flood.app.healthcheck
+   models.flood.app.predict
+
+
+Module Contents
+---------------
+
+.. py:data:: app
+
+.. py:data:: BBOX_PERCENTAGE
+
+.. py:data:: FLOOD_VOLUME
+
+.. py:data:: ENABLE_SEGMENTATION
+
+.. py:function:: gen_flood_detects(height: int, width: int, bbox_percentage: float) -> Dict[str, Union[str, list]]
+
+   Generate a random detection within the input image given a buffer percentage that
+   limits the bounding boxes we generate to always fall within the image bounds.
+
+   :param bbox_percentage: The size of the bounding box to produce.
+   :param width: Width of the image tile.
+   :param height: Height of the image tile.
+   :return: Union[gdal.Dataset, None]: either the gdal dataset or nothing
+
+
+.. py:function:: healthcheck() -> flask.Response
+
+   This is a health check that will always pass since this is a stub model.
+
+   :return: A successful status code (200) indicates all is well
+
+
+.. py:function:: predict() -> flask.Response
+
+   This is the model invocation endpoint for the model container's REST
+   API. The binary payload, in this case an image, is taken from the request
+   parsed to ensure it is a valid image. This is a stub implementation that
+   will always return a fixed set of detections for a valid input image.
+
+   :return: Response: Contains the GeoJSON results or an error status
+
+

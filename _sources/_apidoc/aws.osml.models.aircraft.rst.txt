@@ -1,0 +1,15 @@
+aws.osml.models.aircraft package
+================================
+
+.. automodule:: aws.osml.models.aircraft
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   aws.osml.models.aircraft.app

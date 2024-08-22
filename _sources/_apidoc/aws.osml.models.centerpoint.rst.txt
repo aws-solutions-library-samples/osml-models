@@ -1,0 +1,15 @@
+aws.osml.models.centerpoint package
+===================================
+
+.. automodule:: aws.osml.models.centerpoint
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   aws.osml.models.centerpoint.app

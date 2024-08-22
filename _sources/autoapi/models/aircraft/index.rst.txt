@@ -1,0 +1,28 @@
+models.aircraft
+===============
+
+.. py:module:: models.aircraft
+
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 1
+
+   /autoapi/models/aircraft/app/index
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   models.aircraft.app
+
+
+Package Contents
+----------------
+
+.. py:data:: app
+

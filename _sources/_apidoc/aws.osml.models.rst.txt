@@ -1,0 +1,25 @@
+aws.osml.models package
+=======================
+
+.. automodule:: aws.osml.models
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   aws.osml.models.aircraft
+   aws.osml.models.centerpoint
+   aws.osml.models.flood
+
+Submodules
+----------
+
+.. toctree::
+   :maxdepth: 4
+
+   aws.osml.models.server_utils

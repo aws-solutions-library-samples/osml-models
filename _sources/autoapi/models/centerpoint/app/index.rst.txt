@@ -1,0 +1,79 @@
+models.centerpoint.app
+======================
+
+.. py:module:: models.centerpoint.app
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   models.centerpoint.app.app
+   models.centerpoint.app.BBOX_PERCENTAGE
+   models.centerpoint.app.ENABLE_SEGMENTATION
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   models.centerpoint.app.gen_center_bbox
+   models.centerpoint.app.gen_center_polygon
+   models.centerpoint.app.gen_center_detect
+   models.centerpoint.app.healthcheck
+   models.centerpoint.app.predict
+
+
+Module Contents
+---------------
+
+.. py:data:: app
+
+.. py:data:: BBOX_PERCENTAGE
+
+.. py:data:: ENABLE_SEGMENTATION
+
+.. py:function:: gen_center_bbox(width: int, height: int, bbox_percentage: float) -> List[float]
+
+   Create a single detection bbox that is at the center of and sized proportionally to the image
+   :param bbox_percentage: the size of the bounding box and poly, relative to the image, to return
+   :param width: Raster width of the image passed in
+   :param height: Raster height of the image passed in
+   :return:bbox: Segmented bbox array for center detection
+
+
+.. py:function:: gen_center_polygon(width: int, height: int, bbox_percentage: float) -> List[List[float]]
+
+.. py:function:: gen_center_detect(width: int, height: int, bbox_percentage: float) -> Dict
+
+   Create  circular polygon that is at the center of and sized proportionally to the bbox
+   :param bbox_percentage: the size of the bounding box and poly, relative to the image, to return
+   :param width: Raster width of the image passed in
+   :param height: Raster height of the image passed in
+   :return: geojson: Segmented polygon for center detection
+   this draws a polygon with the same center
+   and width and height percentage polygon can be a circle, or a hexagon, or triangle, etc. - based on the
+   number_of_vertices there is a chance this is not centered as we'd like - meanwhile this will work as-is for initial
+    OSML segmentation 'passthrough'
+
+
+
+.. py:function:: healthcheck() -> flask.Response
+
+   This is a health check that will always pass since this is a stub model.
+
+   :return: Response: Status code (200) indicates all is well
+
+
+.. py:function:: predict() -> flask.Response
+
+   This is the model invocation endpoint for the model container's REST
+   API. The binary payload, in this case an image, is taken from the request
+   parsed to ensure it is a valid image. This is a stub implementation that
+   will always return the fixed set of detections for a valid input image.
+
+   :return: Response: Contains the GeoJSON results or an error status
+
+

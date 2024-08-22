@@ -1,0 +1,7 @@
+aws.osml.models.centerpoint.app module
+======================================
+
+.. automodule:: aws.osml.models.centerpoint.app
+   :members:
+   :undoc-members:
+   :show-inheritance:
