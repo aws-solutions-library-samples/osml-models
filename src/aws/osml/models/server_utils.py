@@ -1,15 +1,40 @@
 #  Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
 
-import argparse
 import logging
+import sys
 from secrets import token_hex
 from typing import Dict, List, Optional, Union
 
+import json_logging
 from flask import Flask
 from osgeo import gdal
 
 # Enable exceptions for GDAL
 gdal.UseExceptions()
+
+
+def build_logger(level: int = logging.WARN) -> logging.Logger:
+    """
+    Utility function to create and configure a logger that outputs logs in JSON format.
+
+    :param level: Logging level (default: logging.INFO).
+    :return: Configured logger instance.
+    """
+
+    # Create a logger at the given level
+    logger = logging.getLogger(__name__)
+
+    # Ensure no duplicate handlers
+    if not logger.hasHandlers():
+        # Create a handler that writes to sys.stdout
+        handler = logging.StreamHandler(sys.stdout)
+
+        # Add the handler to the logger
+        logger.addHandler(handler)
+        logging.root.addHandler(handler)
+
+    logger.setLevel(level)
+    return logger
 
 
 def setup_server(app: Flask):
@@ -23,17 +48,8 @@ def setup_server(app: Flask):
     :param app: The flask application to set up
     :return: None
     """
-    parser = argparse.ArgumentParser()
-    parser.add_argument("command", nargs="?", default="serve")
-    parser.add_argument("-v", "--verbose", default=False)
-    args = parser.parse_args()
-
-    # Set up the logging for the Flask application
-    # and log the startup information
-    configure_logging(args.verbose)
-    logging.info("Initializing REST Model Server...")
-    for arg, value in sorted(vars(args).items()):
-        logging.info("Argument %s: %r", arg, value)
+    # Log all arguments in a single log message
+    app.logger.debug("Initializing OSML Model Flask server!")
 
     # Start the simple web application server using Waitress.
     # Flask's app.run() is only intended to be used in development
@@ -43,21 +59,31 @@ def setup_server(app: Flask):
     serve(app, host="0.0.0.0", port=8080, clear_untrusted_proxy_headers=True)
 
 
-def configure_logging(verbose: bool = False) -> None:
+def build_flask_app(logger: logging.Logger) -> Flask:
     """
-    Configure application logging. Note the timestamp for the
-    log record is available in CloudWatch if this is used in a
-    non-AWS environment, you can add %(asctime)s to the start of
-    the format string.
+    Create a Flask app and configure it to use the provided logger.
+    The logger will output logs in JSON format and write to sys.stdout.
 
-    :param verbose: True, if the DEBUG log level should be used, defaults to False
-    :return: None
+    :param logger: The logger to use with the application
+    :return: Configured Flask app instance.
     """
-    logging_level = logging.INFO
-    if verbose:
-        logging_level = logging.DEBUG
+    # Create a Flask app instance
+    app = Flask(__name__)
 
-    logging.basicConfig(level=logging_level, format="%(levelname)-8s : %(message)s")
+    # Clear default Flask log handlers
+    app.logger.handlers.clear()
+
+    # Add the provided logger's handlers to the Flask app logger
+    for handler in logger.handlers:
+        app.logger.addHandler(handler)
+
+    # Ensure the Flask app logger uses the same logging level as the custom logger
+    app.logger.setLevel(logger.level)
+
+    if json_logging._current_framework is None:
+        json_logging.init_flask(enable_json=True)
+
+    return app
 
 
 def detect_to_feature(

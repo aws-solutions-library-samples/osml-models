@@ -19,4 +19,4 @@ jobs:
       with:
         lfs: 'true'
     - name: Build the Docker Container
-      run: docker build . --file Dockerfile --tag osml-models:$(date +%s)
+      run: docker build . --file docker/Dockerfile --tag osml-models:$(date +%s)

@@ -34,7 +34,7 @@ ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/lib/
 ENV PROJ_LIB=$PROJ_LIB:/opt/conda/share/proj
 
 # Copy the conda environment file and create the environment
-COPY environment-py310.yml environment.yml
+COPY conda/environment-py310.yml environment.yml
 RUN conda env create -n ${CONDA_TARGET_ENV} --file environment.yml && \
     conda clean -afy && \
     find /opt/conda/ -follow -type f -name '*.a' -delete && \
@@ -95,14 +95,15 @@ ENV CONDA_TARGET_ENV="osml_model"
 ENV PATH=$PATH:/opt/conda/bin
 ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/opt/conda/lib/
 ENV PROJ_LIB=$PROJ_LIB:/opt/conda/share/proj
+ENV PYTHONUNBUFFERED=1
 
 # Set up the conda environment
-SHELL ["/opt/conda/bin/conda", "run", "-n", "osml_model", "/bin/bash", "-c"]
+SHELL ["/opt/conda/bin/conda", "run", "--no-capture-output", "-n", "osml_model", "/bin/bash", "-c"]
 RUN echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >> ~/.bashrc
 
 # Copy model source and install it
 RUN mkdir /home/osml-models
-COPY . /home/osml-models
+COPY .. /home/osml-models
 
 # Install the application dependencies
 WORKDIR /home/osml-models
