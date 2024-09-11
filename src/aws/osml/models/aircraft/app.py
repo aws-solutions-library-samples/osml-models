@@ -1,7 +1,6 @@
 #  Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
 
 import json
-import logging
 import os
 import uuid
 import warnings
@@ -14,18 +13,22 @@ from detectron2 import model_zoo
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultPredictor
 from detectron2.structures.instances import Instances
-from flask import Flask, Request, Response, request
+from flask import Request, Response, request
 from osgeo import gdal
 
-from aws.osml.models import setup_server
+from aws.osml.models import build_flask_app, build_logger, setup_server
 
 ENABLE_SEGMENTATION = os.environ.get("ENABLE_SEGMENTATION", "False").lower() == "true"
+ENABLE_FAULT_DETECTION = os.environ.get("ENABLE_FAULT_DETECTION", "False").lower() == "true"
 
-# enable exceptions for GDAL
+# Enable exceptions for GDAL
 gdal.UseExceptions()
 
-app = Flask(__name__)
-app.logger.setLevel(logging.ERROR)
+# Create logger instance
+logger = build_logger()
+
+# Create our default flask app
+app = build_flask_app(logger)
 
 
 def build_predictor() -> DefaultPredictor:
@@ -152,6 +155,14 @@ def request_to_instances(req: Request) -> Union[Instances, None]:
         # Read GDAL dataset and convert to a numpy array
         image_array = gdal_dataset.ReadAsArray()
 
+        # Check if all pixels are zero and raise an exception if so
+        if ENABLE_FAULT_DETECTION:
+            app.logger.debug(f"Image array min: {image_array.min()}, max: {image_array.max()}")
+            if np.all(np.isclose(image_array, 0)):
+                err = "All pixels in the image tile are set to 0."
+                app.logger.error(err)
+                raise Exception(err)
+
         # Handling of different image shapes
         if image_array.ndim == 2:  # For grayscale images without a channel dimension
             # Reshape to add a channel dimension and replicate across 3 channels for RGB
@@ -168,8 +179,6 @@ def request_to_instances(req: Request) -> Union[Instances, None]:
 
         # Transpose the array from (channels, height, width) to (height, width, channels)
         image = np.transpose(image_array, (1, 2, 0))
-
-        # grab detections from Detectron2
         app.logger.debug(f"Running D2 on image array: {image}")
 
         # PyTorch can often give warnings about upcoming changes
@@ -177,8 +186,8 @@ def request_to_instances(req: Request) -> Union[Instances, None]:
             warnings.simplefilter("ignore")
             instances = aircraft_predictor(image)["instances"]
     except Exception as err:
-        app.logger.warning(f"Unable to load image from request: {err}")
-        return None
+        app.logger.error(f"Unable to load tile from request: {err}")
+        raise err
     finally:
         try:
             if gdal_dataset is not None:

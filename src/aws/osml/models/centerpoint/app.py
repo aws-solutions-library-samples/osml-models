@@ -1,23 +1,24 @@
 #  Copyright 2023-2024 Amazon.com, Inc. or its affiliates.
 
 import json
-import logging
 import os
 from secrets import token_hex
 from typing import Dict, List
 
-from flask import Flask, Response, request
+from flask import Response, request
 from matplotlib.patches import CirclePolygon
 from osgeo import gdal
 
-from aws.osml.models.server_utils import detect_to_feature, setup_server
+from aws.osml.models.server_utils import build_flask_app, build_logger, detect_to_feature, setup_server
 
-# enable exceptions for GDAL
+# Enable exceptions for GDAL
 gdal.UseExceptions()
 
-# set up our flask app
-app = Flask(__name__)
-app.logger.setLevel(logging.ERROR)
+# Create logger instance
+logger = build_logger()
+
+# Create our default flask app
+app = build_flask_app(logger)
 
 # Optional ENV configurations
 BBOX_PERCENTAGE = float(os.environ.get("BBOX_PERCENTAGE", 0.1))
