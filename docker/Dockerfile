@@ -103,7 +103,7 @@ RUN echo 'conda activate "${CONDA_TARGET_ENV:-base}"' >> ~/.bashrc
 
 # Copy model source and install it
 RUN mkdir /home/osml-models
-COPY .. /home/osml-models
+COPY . /home/osml-models
 
 # Install the application dependencies
 WORKDIR /home/osml-models
