@@ -10,17 +10,23 @@ permissions:
 jobs:
   docs:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - name: Set up Miniconda with osml_model_sam3 env
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          python-version: '3.12'
+          python-version: "3.12"
+          activate-environment: osml_model_sam3
+          environment-file: conda/environment-sam3.yml
+          channels: conda-forge
+          auto-activate-base: false
+          miniforge-version: latest
       - name: Build Docs
         run: |
-          pip install sphinx
-          python -m pip install sphinx-autoapi
-          python -m pip install sphinx_rtd_theme
-          python -m pip install tox tox-gh-actions
+          python -m pip install --upgrade pip tox
           tox -e docs
       - uses: peaceiris/actions-gh-pages@v4
         with:

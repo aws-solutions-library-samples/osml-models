@@ -31,7 +31,7 @@
   "dependencies": {
     "@aws-cdk/cloud-assembly-schema": "^52.2.0",
     "@aws-cdk/aws-sagemaker-alpha": "^2.240.0-alpha.0",
-    "aws-cdk-lib": "^2.251.0",
+    "aws-cdk-lib": "^2.256.0",
     "constructs": "^10.5.1"
   }
 }
