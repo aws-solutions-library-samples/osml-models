@@ -15,14 +15,23 @@ permissions:
 jobs:
   unit-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash -el {0}
     steps:
     - uses: actions/checkout@v6
       with:
         fetch-depth: '0'
         lfs: 'true'
-    - uses: actions/setup-python@v6
+    - name: Set up Miniconda with osml_model_sam3 env
+      uses: conda-incubator/setup-miniconda@v3
       with:
         python-version: "3.12"
+        activate-environment: osml_model_sam3
+        environment-file: conda/environment-sam3.yml
+        channels: conda-forge
+        auto-activate-base: false
+        miniforge-version: latest
     - name: Run Tox
       run: |
         python -m pip install --upgrade pip tox
