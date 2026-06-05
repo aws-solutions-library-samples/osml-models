@@ -7,8 +7,8 @@ on:
     branches:
       - main
   workflow_dispatch:
-  schedule:
-    - cron: '0 3 * * *'
+#  schedule:
+#    - cron: '0 3 * * *'
 
 env:
   AWS_REGION: "us-west-2"
